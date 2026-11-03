@@ -1,760 +1,1159 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="小説PDFにノンブル（ページ番号）とタイトル（柱）を入れる無料ツール。ブラウザ内で処理し、ファイルは送信されません。">
-<title>ページ番号追加ツール</title>
+<meta name="description" content="PDFの差し込み・並べ替え・削除と、小説向けのページ番号（ノンブル）・柱の追加ができる無料ツール。ファイルは端末の中だけで処理されます。">
+<title>PDF編成ツール</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Noto+Serif+JP:wght@400&display=swap">
-<style>
-/* レイアウト: スマホは1カラム。広い画面では「設定」と「確認・保存」の2カラム。 */
-:root{
-  --paper:#F5F6F9; --card:#FFFFFF; --ink:#1C2232; --sub:#5B6275; --line:#D8DCE5;
-  --accent:#2D4A7E; --accent-ink:#FFFFFF; --accent-soft:#E2E8F3; --danger:#A33A3A;
-  --sheet:#FFFFFF; --sheet-ink:#2A2A2A; --sheet-rule:#C9CCD3; --nombre:#B5402F; --gutter:rgba(45,74,126,.16);
-  --f-display:"Shippori Mincho","Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif;
-  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
-  --r:10px;
-}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --paper:#11141B; --card:#191D27; --ink:#E5E8EF; --sub:#9AA2B4; --line:#2C3241;
-  --accent:#8FAADC; --accent-ink:#0E1420; --accent-soft:#212A3B; --danger:#E08A8A;
-  --sheet:#E8E9ED; --sheet-ink:#222; --sheet-rule:#B9BDC6; --nombre:#B5402F; --gutter:rgba(45,74,126,.2); color-scheme:dark}}
-:root[data-theme="dark"]{
-  --paper:#11141B; --card:#191D27; --ink:#E5E8EF; --sub:#9AA2B4; --line:#2C3241;
-  --accent:#8FAADC; --accent-ink:#0E1420; --accent-soft:#212A3B; --danger:#E08A8A;
-  --sheet:#E8E9ED; --sheet-ink:#222; --sheet-rule:#B9BDC6; --nombre:#B5402F; --gutter:rgba(45,74,126,.2); color-scheme:dark}
-body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.65}
-.wrap{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:20px 40px}
-header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}
-header h1{font-family:var(--f-display);font-weight:700;font-size:1.6rem;margin:0;letter-spacing:.04em;text-wrap:balance}
-.ver{font-size:.75rem;font-weight:700;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:1px 9px;font-variant-numeric:tabular-nums}
-header p{flex-basis:100%;margin:.25rem 0 0;color:var(--sub);font-size:.9rem}
-.grid{display:grid;gap:20px;margin-top:20px}
-@media (min-width:860px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}.col.sticky{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}}
-.col{display:grid;gap:20px;min-width:0}
-section.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 16px;min-width:0}
-h2{font-family:var(--f-display);font-size:1.05rem;margin:0 0 12px;display:flex;gap:.5em;align-items:baseline}
-h2 .step{font-family:var(--f-body);font-size:.72rem;font-weight:700;color:var(--accent);letter-spacing:.08em}
-.notice{margin:0 0 12px;padding:10px 12px;background:var(--accent-soft);border-radius:8px;font-size:.84rem;line-height:1.6}
-.notice strong{color:var(--accent)}
-.drop{display:grid;place-items:center;text-align:center;gap:6px;border:1.5px dashed var(--line);border-radius:var(--r);padding:26px 12px;cursor:pointer;transition:border-color .15s,background .15s;position:relative}
-.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
-.drop strong{font-size:1rem}
-.drop span{color:var(--sub);font-size:.85rem}
-.drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-.fileinfo{margin:12px 0 0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.88rem}
-.fileinfo dt{color:var(--sub)}
-.fileinfo dd{margin:0;min-width:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
-.fields{display:grid;gap:16px}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-label.f{display:grid;gap:4px;font-size:.82rem;color:var(--sub);font-weight:500;min-width:0;align-content:start}
-.hint{font-size:.76rem;color:var(--sub);margin:6px 0 0}
-input[type=text],input[type=number],select{font:inherit;font-size:1rem;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;box-sizing:border-box;font-variant-numeric:tabular-nums;min-width:0}
-input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible,.seg label:has(input:focus-visible),.checks label:has(input:focus-visible),.drop:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
-.unit{position:relative;display:block}
-.unit input{padding-right:2.6em}
-.unit em{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-style:normal;color:var(--sub);font-size:.8rem;pointer-events:none}
-.seg{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--paper)}
-.seg label{flex:1 1 0;min-width:0;text-align:center;padding:8px 4px;font-size:.84rem;color:var(--ink);cursor:pointer;border-left:1px solid var(--line);line-height:1.35}
-.seg label:first-child{border-left:0}
-.seg input{position:absolute;opacity:0;pointer-events:none}
-.seg label:has(input:checked){background:var(--accent);color:var(--accent-ink);font-weight:700}
-.seg.four label{flex-basis:50%;border-top:1px solid var(--line)}
-.seg.four label:nth-child(-n+2){border-top:0}
-.seg.four label:nth-child(3){border-left:0}
-.checks{display:flex;gap:10px;flex-wrap:wrap}
-.checks label{flex:1 1 0;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.88rem;cursor:pointer;background:var(--paper)}
-.checks input{accent-color:var(--accent);width:18px;height:18px;margin:0}
-.fieldset-title{font-size:.82rem;color:var(--sub);font-weight:500;margin-bottom:4px}
-.inline{display:flex;gap:10px;align-items:center}
-.inline .seg{flex:1}
-.inline .unit{width:7.5em;flex:none}
-/* 見開き図 */
-.spread{display:flex;justify-content:center;padding:8px 0 4px}
-.page{position:relative;width:min(44%,180px);background:var(--sheet);color:var(--sheet-ink);box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden}
-.page + .page{border-left:1px solid var(--sheet-rule)}
-.page .gut{position:absolute;top:0;bottom:0;background:var(--gutter)}
-.page .trim{position:absolute;border:1px dashed var(--nombre);opacity:.55}
-.page .body{position:absolute}
-.page.v .body{background:repeating-linear-gradient(90deg,var(--sheet-rule) 0 2px,transparent 2px 9px)}
-.page.h .body{background:repeating-linear-gradient(180deg,var(--sheet-rule) 0 2px,transparent 2px 9px)}
-.page .slot{position:absolute;font-family:"Times New Roman",Times,serif;font-size:11px;white-space:nowrap;display:flex;gap:.8em;align-items:baseline;color:var(--sheet-ink);line-height:1}
-.page .slot b{color:var(--nombre);font-weight:700}
-.page .slot i{font-style:normal;font-family:var(--f-display);font-size:9.5px;max-width:7em;overflow:hidden;text-overflow:ellipsis}
-.page .side{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:10px;font-weight:700;color:#6a7080}
-.page .side span{background:var(--sheet);padding:2px 5px;border-radius:4px}
-.spread-cap{text-align:center;font-size:.8rem;color:var(--sub);margin:6px 0 0}
-.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 14px;font-size:.74rem;color:var(--sub);margin-top:6px}
-.legend i{display:inline-block;width:10px;height:10px;vertical-align:-1px;margin-right:4px;border-radius:2px}
-/* ボタン・状態 */
-.actions{display:grid;gap:10px}
-button{font:inherit;font-weight:700;border-radius:8px;padding:12px 14px;cursor:pointer;border:1px solid transparent}
-button.primary{background:var(--accent);color:var(--accent-ink)}
-button.ghost{background:transparent;border-color:var(--line);color:var(--ink)}
-button:disabled{opacity:.45;cursor:not-allowed}
-.status{font-size:.86rem;min-height:1.3em;margin:10px 0 0}
-.status.err{color:var(--danger)}
-.status.ok{color:var(--accent)}
-.thumbs{display:grid;gap:20px;margin-top:6px}
-.sp{margin:0;display:grid;gap:6px;min-width:0}
-.sp-pages{display:flex;justify-content:center;max-width:460px;width:100%;margin:0 auto;box-shadow:0 2px 6px rgba(0,0,0,.22)}
-.sp-page{flex:1 1 0;min-width:0;background:#fff;position:relative}
-.sp-page canvas{display:block;width:100%;height:auto}
-.sp-page.left{box-shadow:inset -6px 0 8px -6px rgba(0,0,0,.35)}
-.sp-page.right{box-shadow:inset 6px 0 8px -6px rgba(0,0,0,.35)}
-.sp-page.blank{background:var(--sheet)}
-.sp figcaption{display:flex;justify-content:space-around;max-width:460px;width:100%;margin:0 auto;font-size:.76rem;color:var(--sub);font-variant-numeric:tabular-nums}
-.pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}
-.pager button{padding:8px 12px}
-.pager span{font-size:.85rem;color:var(--sub);font-variant-numeric:tabular-nums}
-.empty{color:var(--sub);font-size:.88rem;padding:18px 0;text-align:center}
-.warn{background:var(--accent-soft);border-radius:8px;padding:8px 10px;font-size:.82rem;margin:8px 0 0}
-/* フッター */
-footer{margin-top:28px;display:grid;gap:16px}
-@media (min-width:860px){footer{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}}
-footer h3{font-family:var(--f-display);font-size:.98rem;margin:0 0 8px}
-footer a{color:var(--accent)}
-.contact p{margin:0;font-size:.88rem}
-.history details{font-size:.86rem}
-.history summary{cursor:pointer;color:var(--accent);font-weight:700}
-.history ol{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:12px}
-.history li{display:grid;gap:2px}
-.history .h-head{display:flex;gap:10px;align-items:baseline;font-variant-numeric:tabular-nums}
-.history .h-head b{font-size:.9rem}
-.history .h-head span{color:var(--sub);font-size:.8rem}
-.history ul{margin:2px 0 0;padding-left:1.2em;color:var(--ink)}
-.copy{text-align:center;color:var(--sub);font-size:.78rem;margin-top:24px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
-</style>
-<style>*,*::before,*::after{box-sizing:border-box}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;-webkit-text-size-adjust:100%}img{max-width:100%}[hidden]{display:none!important}</style>
-</head>
-<body>
-<div class="wrap">
-  <header>
-    <h1>ページ番号追加ツール</h1>
-    <span class="ver" id="verBadge"></span>
-    <p>小説PDFにノンブル（ページ番号）とタイトル（柱）を入れます。ファイルは端末の中だけで処理され、どこにも送信されません。</p>
-  </header>
-
-  <div class="grid">
-    <div class="col">
-      <section class="card">
-        <h2><span class="step">STEP 1</span>PDFを選ぶ</h2>
-        <p class="notice"><strong>Googleドライブ・Dropboxなどに保存しているPDFは</strong>、一度スマホやPCにダウンロードしてから、端末のファイルとして選んでください。</p>
-        <label class="drop" id="drop">
-          <input type="file" id="file" accept="application/pdf,.pdf">
-          <strong>タップしてPDFを選択</strong>
-          <span>PCはここにドラッグ＆ドロップもできます</span>
-        </label>
-        <dl class="fileinfo" id="fileinfo" hidden>
-          <dt>ファイル</dt><dd id="fi-name"></dd>
-          <dt>ページ数</dt><dd id="fi-pages"></dd>
-          <dt>サイズ</dt><dd id="fi-size"></dd>
-        </dl>
-        <p class="status" id="loadStatus"></p>
-      </section>
-
-      <section class="card">
-        <h2><span class="step">STEP 2</span>用紙と並び</h2>
-        <div class="fields">
-          <label class="f">仕上がりサイズ
-            <select id="paper">
-              <option value="orig:0">元のPDFのサイズのまま</option>
-              <option value="a6:3">A6 (105x148mm) + 塗り足し(3mm)</option>
-              <option value="a6:0">A6 (105x148mm)</option>
-              <option value="b6:3">B6 (128x182mm) + 塗り足し(3mm)</option>
-              <option value="b6:0">B6 (128x182mm)</option>
-              <option value="a5:3">A5 (148x210mm) + 塗り足し(3mm)</option>
-              <option value="a5:0">A5 (148x210mm)</option>
-              <option value="b5:3">B5 (182x257mm) + 塗り足し(3mm)</option>
-              <option value="b5:0">B5 (182x257mm)</option>
-              <option value="a5sq:3">A5正方形 (148x148mm) + 塗り足し(3mm)</option>
-              <option value="a5sq:0">A5正方形 (148x148mm)</option>
-              <option value="b5sq:3">B5正方形 (182x182mm) + 塗り足し(3mm)</option>
-              <option value="b5sq:0">B5正方形 (182x182mm)</option>
-            </select>
-          </label>
-          <p class="hint" style="margin-top:-10px">サイズを選ぶと、PDFの各ページをその用紙に収まるよう配置し直します。塗り足しありの場合、番号の位置は仕上がり線から測ります。</p>
-
-          <div>
-            <div class="fieldset-title">とじしろ</div>
-            <div class="inline">
-              <div class="seg" role="radiogroup" aria-label="とじしろ">
-                <label><input type="radio" name="gutterOn" id="gut-off" value="off" checked>なし</label>
-                <label><input type="radio" name="gutterOn" id="gut-on" value="on">あり</label>
-              </div>
-              <span class="unit"><input type="number" id="gutter" min="0" max="40" step="0.5" value="5" inputmode="decimal" aria-label="とじしろの幅"><em>mm</em></span>
-            </div>
-            <p class="hint">ありの場合、のど側（綴じる側）に指定した幅の余白を空け、本文を外側へずらします（必要に応じて本文を少し縮小します）。</p>
-          </div>
-
-          <div>
-            <div class="fieldset-title">綴じ方向</div>
-            <div class="seg" role="radiogroup" aria-label="綴じ方向">
-              <label><input type="radio" name="bind" id="bind-r" value="right" checked>右綴じ（縦書き）</label>
-              <label><input type="radio" name="bind" id="bind-l" value="left">左綴じ（横書き）</label>
-            </div>
-          </div>
-
-          <div>
-            <div class="fieldset-title">PDFの1枚目を置くページ</div>
-            <div class="seg" role="radiogroup" aria-label="1枚目のページ">
-              <label><input type="radio" name="first" id="first-l" value="left" checked>左ページから始める</label>
-              <label><input type="radio" name="first" id="first-r" value="right">右ページから始める</label>
-            </div>
-            <p class="hint">以降は左右交互に並びます。番号やタイトルの「外側」「のど側」はこの左右で決まります。</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2><span class="step">STEP 3</span>ページ番号</h2>
-        <div class="fields">
-          <div>
-            <div class="fieldset-title">表示位置</div>
-            <div class="seg" role="radiogroup" aria-label="ページ番号の位置">
-              <label><input type="radio" name="numPos" id="np-to" value="top-outer" checked>上・外側</label>
-              <label><input type="radio" name="numPos" id="np-bc" value="bottom-center">下・中央</label>
-              <label><input type="radio" name="numPos" id="np-bo" value="bottom-outer">下・外側</label>
-            </div>
-          </div>
-          <div class="row2">
-            <label class="f">開始ページ番号
-              <input type="number" id="start" min="1" step="1" value="1" inputmode="numeric">
-            </label>
-            <label class="f">番号を隠すページ
-              <input type="text" id="hide" placeholder="例：1-2, 42" autocomplete="off">
-            </label>
-          </div>
-          <p class="hint" style="margin-top:-10px">「開始ページ番号」はPDFの1枚目に割り当てる番号です。表紙や扉など番号を出したくないページは番号で指定します（数えたまま非表示になり、タイトルも出ません）。</p>
-          <div class="row3">
-            <label class="f">文字サイズ
-              <span class="unit"><input type="number" id="size" min="5" max="24" step="0.5" value="9" inputmode="decimal"><em>pt</em></span>
-            </label>
-            <label class="f">上下からの距離
-              <span class="unit"><input type="number" id="vdist" min="0" max="60" step="0.5" value="10" inputmode="decimal"><em>mm</em></span>
-            </label>
-            <label class="f">外側からの距離
-              <span class="unit"><input type="number" id="outer" min="0" max="60" step="0.5" value="12" inputmode="decimal"><em>mm</em></span>
-            </label>
-          </div>
-          <div>
-            <div class="fieldset-title">書体</div>
-            <div class="seg" role="radiogroup" aria-label="書体">
-              <label><input type="radio" name="face" id="face-serif" value="serif" checked>明朝系</label>
-              <label><input type="radio" name="face" id="face-sans" value="sans">ゴシック系</label>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2><span class="step">STEP 4</span>タイトル（柱）</h2>
-        <div class="fields">
-          <label class="f">タイトル（任意）
-            <input type="text" id="title" placeholder="例：Coral pea" autocomplete="off">
-          </label>
-          <div>
-            <div class="fieldset-title">表示位置</div>
-            <div class="seg four" role="radiogroup" aria-label="タイトルの位置">
-              <label><input type="radio" name="titlePos" id="tp-to" value="top-outer" checked>上・外側</label>
-              <label><input type="radio" name="titlePos" id="tp-tc" value="top-center">上・中央</label>
-              <label><input type="radio" name="titlePos" id="tp-bo" value="bottom-outer">下・外側</label>
-              <label><input type="radio" name="titlePos" id="tp-bc" value="bottom-center">下・中央</label>
-            </div>
-            <p class="hint">ページ番号と同じ位置を選んだ場合は、番号の内側に並べます。日本語のタイトルは高解像度（600dpi）の画像として入ります。</p>
-          </div>
-          <div>
-            <div class="fieldset-title">表示するページ</div>
-            <div class="checks">
-              <label><input type="checkbox" id="titleL" checked>左ページ</label>
-              <label><input type="checkbox" id="titleR">右ページ</label>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <div class="col sticky">
-      <section class="card">
-        <h2><span class="step">確認</span>見開きのイメージ</h2>
-        <div class="spread" id="spread"></div>
-        <p class="spread-cap" id="spreadCap"></p>
-        <div class="legend" id="legend"></div>
-      </section>
-
-      <section class="card">
-        <h2><span class="step">STEP 5</span>番号を付けて保存</h2>
-        <div class="actions">
-          <button class="primary" id="run" disabled>ページ番号を付ける</button>
-          <button class="ghost" id="save" disabled>PDFを保存</button>
-        </div>
-        <p class="status" id="runStatus">PDFを選ぶと実行できます。</p>
-        <div id="warnBox"></div>
-        <div id="preview">
-          <div class="empty" id="pvEmpty">番号を付けると、仕上がりを見開きで確認できます。</div>
-          <div class="thumbs" id="thumbs"></div>
-          <div class="pager" id="pager" hidden>
-            <button class="ghost" id="prev">‹ 前へ</button>
-            <span id="pvRange"></span>
-            <button class="ghost" id="next">次へ ›</button>
-          </div>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <footer>
-    <section class="card contact">
-      <h3>お問い合わせ</h3>
-      <p id="contactText"></p>
-    </section>
-    <section class="card history">
-      <h3>更新履歴</h3>
-      <details id="historyBox">
-        <summary>すべての更新を見る</summary>
-        <ol id="historyList"></ol>
-      </details>
-    </section>
-  </footer>
-  <p class="copy" id="copy"></p>
-</div>
-
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&family=Noto+Serif+JP:wght@400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<style>
+:root{
+  --bg:#f4f1ea; --paper:#fffdf8; --ink:#2a2622; --sub:#7a7268; --line:#e2dccf;
+  --accent:#d0492a; --accent-soft:#fbe7df; --ok:#2f7a55;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Zen Kaku Gothic New",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 14px 8px}
+.title{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.title h1{font-size:18px;margin:0;letter-spacing:.04em}
+.title span{font-size:12px;color:var(--sub)}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ghost{background:transparent}
+.legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:12px}
+.legend .chip{display:flex;align-items:center;gap:5px;background:var(--paper);border:1px solid var(--line);border-radius:99px;padding:3px 9px 3px 4px;max-width:100%}
+.legend .chip b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;color:#fff;font-size:11px;flex:none}
+.legend .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main{padding:14px 14px 220px}
+.empty{max-width:420px;margin:12vh auto 0;text-align:center}
+.empty .big{display:block;width:100%;padding:28px 16px;border:2px dashed #cbbfa9;border-radius:16px;background:var(--paper);font-size:16px;font-weight:700}
+.empty p{color:var(--sub);font-size:13px;line-height:1.8}
+.count{font-size:13px;color:var(--sub);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:14px}
+.card{position:relative;background:var(--paper);border:2px solid transparent;border-radius:10px;padding:6px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.card.sel{border-color:var(--accent);background:var(--accent-soft)}
+.thumb{aspect-ratio:1/1.25;display:grid;place-items:center;background:#ece7dc;border-radius:6px;overflow:hidden}
+.thumb img{max-width:100%;max-height:100%;display:block;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-size:12px}
+.meta .no{font-weight:700;font-size:13px}
+.meta .tag{color:#fff;border-radius:5px;padding:1px 5px;font-size:11px}
+.card.ins-before::before,.card.ins-after::after{content:"";position:absolute;top:-4px;bottom:-4px;width:5px;border-radius:3px;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.card.ins-before::before{left:-10px}
+.card.ins-after::after{right:-10px}
+.inslabel{position:absolute;top:-10px;left:-14px;z-index:2;background:var(--accent);color:#fff;font-size:10px;font-weight:700;border-radius:4px;padding:1px 4px;white-space:nowrap}
+.card.ins-after .inslabel{left:auto;right:-14px}
+.picking .card{cursor:pointer}
+/* bottom sheet */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--paper);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.12);max-height:55vh;display:flex;flex-direction:column;transform:translateY(110%);transition:transform .22s ease}
+.sheet .sc{overflow:auto;padding:12px 16px 4px;-webkit-overflow-scrolling:touch}
+.sheet .row{margin:0;padding:8px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--paper)}
+.sheet.open{transform:none}
+.sheet h2{font-size:15px;margin:0 0 4px}
+.sheet .fname{font-size:12px;color:var(--sub);margin-bottom:10px;word-break:break-all}
+.field{margin:8px 0}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:40px;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:18px;font-weight:700}
+.stepper input{width:64px;text-align:center}
+.field > label.h{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:700}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg label{flex:1 1 auto;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid var(--line);border-radius:9px;padding:8px 8px;font-size:13px;background:var(--bg);white-space:nowrap}
+.seg input[type=radio]{display:none}
+.seg label:has(input:checked){background:var(--ink);color:#fff;border-color:var(--ink)}
+input[type=number],input[type=text]{font:inherit;font-size:16px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#fff;width:100%}
+.inline{display:flex;align-items:center;gap:6px;font-size:13px;margin-top:8px}
+.inline input{width:76px}
+.hint{font-size:12px;color:var(--sub);margin:6px 0 0;line-height:1.6}
+.posnow{background:var(--accent-soft);color:#8a2f17;border-radius:8px;padding:8px 10px;font-size:13px;font-weight:700;margin-top:8px}
+.row{display:flex;gap:8px;margin-top:14px}
+.row .btn{flex:1;padding:11px}
+.err{color:#b3261e;font-size:12px;margin-top:6px;min-height:1em}
+/* selection bar */
+.selbar{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--ink);color:#fff;padding:8px 8px calc(8px + env(safe-area-inset-bottom));display:flex;gap:4px;transform:translateY(110%);transition:transform .2s}
+.selbar.open{transform:none}
+.selbar button{flex:1;background:transparent;border:0;color:#fff;border-radius:8px;padding:6px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px}
+.selbar button i{font-style:normal;font-size:18px;line-height:1}
+.selbar button:active{background:rgba(255,255,255,.12)}
+.selbar .info{flex:1.2;font-size:11px;display:flex;align-items:center;justify-content:center;text-align:center;opacity:.8}
+.toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-80px);z-index:50;background:var(--ink);color:#fff;border-radius:10px;padding:9px 14px;font-size:13px;transition:transform .25s;max-width:90vw}
+.toast.show{transform:translate(-50%,0)}
+.grid{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.card img{-webkit-user-drag:none;pointer-events:none}
+.card.pressing{transform:scale(.96);transition:transform .35s}
+/* preview */
+.pv{position:fixed;inset:0;z-index:40;background:#1a1714;color:#fff;display:none;flex-direction:column}
+.pv.open{display:flex}
+.pv-top{display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 8px}
+.pv-top .t{flex:1;font-weight:700;font-size:15px}
+.pv-top button{background:rgba(255,255,255,.12);border:0;color:#fff;border-radius:8px;padding:7px 11px;font-size:13px}
+.pv-body{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:6px 10px;-webkit-overflow-scrolling:touch}
+.pv-body canvas{background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.4);margin:auto;display:block}
+.pv-load{margin:auto;opacity:.7;font-size:13px}
+.pv-info{background:rgba(255,255,255,.06);margin:0 10px;border-radius:10px;padding:9px 12px;font-size:12px;display:grid;grid-template-columns:auto 1fr;gap:3px 12px}
+.pv-info dt{opacity:.6}
+.pv-info dd{margin:0;word-break:break-all}
+.pv-nav{display:flex;gap:8px;padding:10px 10px calc(10px + env(safe-area-inset-bottom))}
+.pv-nav button{flex:1;background:rgba(255,255,255,.12);border:0;color:#fff;border-radius:10px;padding:11px;font-size:14px;font-weight:700}
+.pv-nav button:disabled{opacity:.3}
+/* version button + info sheet */
+.verbtn{margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:2px 10px;font-size:11px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums}
+.info-ver{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.info-ver b{font-size:20px;font-variant-numeric:tabular-nums}
+.info-ver span{font-size:12px;color:var(--sub)}
+.info h3{font-size:13px;margin:14px 0 6px}
+.info p{font-size:13px;line-height:1.7;margin:0}
+.info a{color:var(--accent);font-weight:700}
+.hist{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.hist .hh{display:flex;gap:8px;align-items:baseline;font-variant-numeric:tabular-nums}
+.hist .hh b{font-size:13px}
+.hist .hh span{font-size:11px;color:var(--sub)}
+.hist ul{margin:3px 0 0;padding-left:1.2em;font-size:12px;line-height:1.7}
+/* page-number panel */
+:root{--rule:#cfc7b6;--gut:rgba(208,73,42,.14)}
+.nb{position:fixed;inset:0;z-index:40;background:var(--bg);display:none;flex-direction:column}
+.nb.open{display:flex}
+.nb-top{display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;border-bottom:1px solid var(--line)}
+.nb-top .t{flex:1;font-weight:700;font-size:16px;letter-spacing:.04em}
+.nb-top button{border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:7px 11px;font-size:13px}
+.nb-body{flex:1;overflow:auto;padding:12px 14px 20px;-webkit-overflow-scrolling:touch}
+.nb-in{max-width:620px;margin:0 auto;display:grid;gap:12px}
+.nb-lead{font-size:13px;color:var(--sub);margin:0}
+.box{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.box > h3{font-size:14px;margin:0 0 8px}
+.nb .field{margin:12px 0 0}
+.nb label.h{display:block;font-size:12px;color:var(--sub);margin-bottom:5px;font-weight:700}
+.nb .seg input{display:none}
+.nb .seg label{flex:1 1 0;min-width:0;white-space:normal;text-align:center;line-height:1.35}
+.nb .seg.two-rows label{flex:1 1 40%}
+.nb select{font:inherit;font-size:15px;border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff;width:100%;color:var(--ink)}
+.nb .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.nb .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.nb .grid2 > div,.nb .grid3 > div{min-width:0}
+.unit{position:relative;display:block}
+.unit input{padding-right:2.4em}
+.unit em{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-style:normal;color:var(--sub);font-size:12px;pointer-events:none}
+.gutrow{display:flex;gap:8px;align-items:center}
+.gutrow .seg{flex:1}
+.gutrow .unit{width:6.5em;flex:none}
+.nb input:disabled{opacity:.45}
+/* spread diagram */
+.spread{display:flex;justify-content:center;padding:4px 0}
+.mini{position:relative;width:min(42%,150px);background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18);overflow:hidden}
+.mini + .mini{border-left:1px solid var(--rule)}
+.mini .gut{position:absolute;top:0;bottom:0;background:var(--gut)}
+.mini .trim{position:absolute;border:1px dashed var(--accent);opacity:.6}
+.mini .body{position:absolute}
+.mini.v .body{background:repeating-linear-gradient(90deg,var(--rule) 0 2px,transparent 2px 8px)}
+.mini.h .body{background:repeating-linear-gradient(180deg,var(--rule) 0 2px,transparent 2px 8px)}
+.mini .slot{position:absolute;font-family:"Times New Roman",Times,serif;font-size:10px;white-space:nowrap;display:flex;gap:.7em;align-items:baseline;color:#222;line-height:1}
+.mini .slot b{color:var(--accent)}
+.mini .slot i{font-style:normal;font-family:"Noto Serif JP",serif;font-size:8.5px;max-width:6.5em;overflow:hidden;text-overflow:ellipsis}
+.mini .side{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:10px;font-weight:700;color:#6e665c}
+.mini .side span{background:#fff;padding:1px 5px;border-radius:4px}
+.cap{text-align:center;font-size:12px;color:var(--sub);margin:6px 0 0;font-variant-numeric:tabular-nums}
+.lg{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px;font-size:11px;color:var(--sub);margin-top:4px}
+.lg i{display:inline-block;width:10px;height:10px;vertical-align:-1px;margin-right:4px;border-radius:2px}
+/* result spreads */
+.nb-status{font-size:13px;margin:0;line-height:1.6}
+.nb-status.ok{color:var(--ok)}
+.nb-status.err{color:#b3261e}
+.nb-warn{background:var(--accent-soft);color:#8a2f17;border-radius:8px;padding:8px 10px;font-size:12px;margin:8px 0 0;line-height:1.6}
+.sps{display:grid;gap:18px;margin-top:12px}
+.sp{margin:0;display:grid;gap:5px}
+.sp-pages{display:flex;max-width:440px;width:100%;margin:0 auto;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.sp-page{flex:1 1 0;min-width:0;background:#fff}
+.sp-page canvas{display:block;width:100%;height:auto}
+.sp-page.left{box-shadow:inset -6px 0 8px -6px rgba(0,0,0,.35)}
+.sp-page.right{box-shadow:inset 6px 0 8px -6px rgba(0,0,0,.35)}
+.sp figcaption{display:flex;justify-content:space-around;max-width:440px;width:100%;margin:0 auto;font-size:11px;color:var(--sub);font-variant-numeric:tabular-nums}
+.pager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}
+.pager span{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+.nb-actions{display:flex;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--paper)}
+.nb-actions .btn{flex:1;padding:12px}
+.busy{position:fixed;inset:0;z-index:60;background:rgba(244,241,234,.75);display:none;place-items:center;font-weight:700}
+.busy.show{display:grid}
+</style>
+</head>
+<body>
+<header>
+  <div class="title"><h1>PDF編成ツール</h1><span>差し込み・並べ替え・削除・ページ番号</span><button class="verbtn" id="bInfo" aria-label="バージョンと更新履歴"></button></div>
+  <div class="tools">
+    <button class="btn primary" id="bAdd">＋ PDFを追加</button>
+    <button class="btn" id="bExport" disabled>保存</button>
+    <button class="btn" id="bNombre" disabled>ページ番号</button>
+    <button class="btn ghost" id="bUndo" disabled>↶ 戻す</button>
+    <button class="btn ghost" id="bReset" disabled>リセット</button>
+  </div>
+  <div class="legend" id="legend"></div>
+</header>
+
+<main id="main">
+  <div class="empty" id="empty">
+    <button class="big" id="bOpen">📄 元になるPDFを選ぶ</button>
+    <p>ファイルはこの端末の中だけで処理され、<br>どこにも送信されません。</p>
+  </div>
+  <p class="count" id="count" hidden></p>
+  <div class="grid" id="grid"></div>
+</main>
+
+<!-- insert sheet -->
+<div class="sheet" id="insSheet"><div class="sc">
+  <h2>PDFを差し込む</h2>
+  <div class="fname" id="insName"></div>
+  <div class="field">
+    <label class="h">差し込むページ</label>
+    <div class="seg">
+      <label><input type="radio" name="rng" value="all" checked>すべて</label>
+      <label><input type="radio" name="rng" value="part">範囲を指定</label>
+    </div>
+    <div class="inline" id="rngBox" hidden><input type="text" id="rngText" placeholder="例: 1-3,5" style="width:100%"></div>
+  </div>
+  <div class="field">
+    <label class="h">差し込む位置</label>
+    <div class="seg">
+      <label><input type="radio" name="pos" value="top">先頭</label>
+      <label><input type="radio" name="pos" value="end" checked>末尾</label>
+      <label><input type="radio" name="pos" value="after">ページの後</label>
+    </div>
+    <div class="inline" id="afterBox" hidden>
+      <div class="stepper"><button type="button" id="afterMinus">−</button><input type="number" id="afterNo" min="1" inputmode="numeric" enterkeyhint="done"><button type="button" id="afterPlus">＋</button></div>
+      ページ目の後ろ
+    </div>
+    <div class="posnow" id="posNow"></div>
+    <p class="hint">上のページをタップしても指定できます（タップしたページの後ろに入ります）。</p>
+  </div>
+  <div class="err" id="insErr"></div>
+  </div>
+  <div class="row">
+    <button class="btn" id="insCancel">キャンセル</button>
+    <button class="btn primary" id="insOk">差し込む</button>
+  </div>
+</div>
+
+<!-- export sheet -->
+<div class="sheet" id="expSheet"><div class="sc">
+  <h2>PDFとして保存</h2>
+  <div class="fname" id="expInfo"></div>
+  <div class="field">
+    <label class="h">ファイル名</label>
+    <input type="text" id="expName">
+  </div>
+  <div class="err" id="expErr"></div>
+  </div>
+  <div class="row">
+    <button class="btn" id="expCancel">閉じる</button>
+    <button class="btn primary" id="expOk">保存する</button>
+  </div>
+</div>
+
+<div class="selbar" id="selbar">
+  <div class="info" id="selInfo"></div>
+  <button data-act="first"><i>⇤</i>先頭へ</button>
+  <button data-act="left"><i>◀</i>前へ</button>
+  <button data-act="right"><i>▶</i>後へ</button>
+  <button data-act="last"><i>⇥</i>末尾へ</button>
+  <button data-act="rot"><i>⟳</i>回転</button>
+  <button data-act="del"><i>🗑</i>削除</button>
+  <button data-act="close"><i>✕</i>閉じる</button>
+</div>
+
+<div class="pv" id="pv">
+  <div class="pv-top">
+    <div class="t" id="pvTitle"></div>
+    <button id="pvZoom">拡大</button>
+    <button id="pvClose">✕ 閉じる</button>
+  </div>
+  <div class="pv-body" id="pvBody"></div>
+  <dl class="pv-info" id="pvInfo"></dl>
+  <div class="pv-nav">
+    <button id="pvPrev">◀ 前のページ</button>
+    <button id="pvNext">次のページ ▶</button>
+  </div>
+</div>
+
+<!-- info sheet -->
+<div class="sheet info" id="infoSheet"><div class="sc">
+  <div class="info-ver"><b id="infoVer"></b><span>PDF編成ツール</span></div>
+  <h3>お問い合わせ</h3>
+  <p id="infoContact"></p>
+  <h3>更新履歴</h3>
+  <ul class="hist" id="infoHist"></ul>
+  </div>
+  <div class="row"><button class="btn" id="infoClose">閉じる</button></div>
+</div>
+
+<!-- page-number panel -->
+<div class="nb" id="nb">
+  <div class="nb-top">
+    <div class="t">ページ番号を付ける</div>
+    <button id="nbClose">✕ 閉じる</button>
+  </div>
+  <div class="nb-body" id="nbBody"><div class="nb-in">
+    <p class="nb-lead" id="nbLead"></p>
+
+    <section class="box">
+      <h3>見開きのイメージ</h3>
+      <div class="spread" id="nbSpread"></div>
+      <p class="cap" id="nbCap"></p>
+      <div class="lg" id="nbLegend"></div>
+    </section>
+
+    <section class="box">
+      <h3>用紙と並び</h3>
+      <div class="field">
+        <label class="h" for="nbPaper">仕上がりサイズ</label>
+        <select id="nbPaper">
+          <option value="orig:0">元のPDFのサイズのまま</option>
+          <option value="a6:3">A6 (105x148mm) + 塗り足し(3mm)</option>
+          <option value="a6:0">A6 (105x148mm)</option>
+          <option value="b6:3">B6 (128x182mm) + 塗り足し(3mm)</option>
+          <option value="b6:0">B6 (128x182mm)</option>
+          <option value="a5:3">A5 (148x210mm) + 塗り足し(3mm)</option>
+          <option value="a5:0">A5 (148x210mm)</option>
+          <option value="b5:3">B5 (182x257mm) + 塗り足し(3mm)</option>
+          <option value="b5:0">B5 (182x257mm)</option>
+          <option value="a5sq:3">A5正方形 (148x148mm) + 塗り足し(3mm)</option>
+          <option value="a5sq:0">A5正方形 (148x148mm)</option>
+          <option value="b5sq:3">B5正方形 (182x182mm) + 塗り足し(3mm)</option>
+          <option value="b5sq:0">B5正方形 (182x182mm)</option>
+        </select>
+        <p class="hint">サイズを選ぶと、各ページをその用紙に収まるよう配置し直します。塗り足しありの場合、番号の位置は仕上がり線から測ります。</p>
+      </div>
+      <div class="field">
+        <label class="h">とじしろ</label>
+        <div class="gutrow">
+          <div class="seg">
+            <label><input type="radio" name="nbGut" value="off" checked>なし</label>
+            <label><input type="radio" name="nbGut" value="on">あり</label>
+          </div>
+          <span class="unit"><input type="number" id="nbGutter" min="0" max="40" step="0.5" value="5" inputmode="decimal" aria-label="とじしろの幅"><em>mm</em></span>
+        </div>
+        <p class="hint">ありの場合、のど側（綴じる側）に余白を空けて本文を外側へずらします。</p>
+      </div>
+      <div class="field">
+        <label class="h">綴じ方向</label>
+        <div class="seg">
+          <label><input type="radio" name="nbBind" value="right" checked>右綴じ（縦書き）</label>
+          <label><input type="radio" name="nbBind" value="left">左綴じ（横書き）</label>
+        </div>
+      </div>
+      <div class="field">
+        <label class="h">1ページ目を置く側</label>
+        <div class="seg">
+          <label><input type="radio" name="nbFirst" value="left" checked>左ページから</label>
+          <label><input type="radio" name="nbFirst" value="right">右ページから</label>
+        </div>
+        <p class="hint">以降は左右交互に並びます。「外側」「のど側」はこの左右で決まります。</p>
+      </div>
+    </section>
+
+    <section class="box">
+      <h3>ページ番号</h3>
+      <div class="field">
+        <label class="h">表示位置</label>
+        <div class="seg">
+          <label><input type="radio" name="nbNumPos" value="top-outer" checked>上・外側</label>
+          <label><input type="radio" name="nbNumPos" value="bottom-center">下・中央</label>
+          <label><input type="radio" name="nbNumPos" value="bottom-outer">下・外側</label>
+        </div>
+      </div>
+      <div class="field grid2">
+        <div><label class="h" for="nbStart">開始ページ番号</label><input type="number" id="nbStart" min="1" step="1" value="1" inputmode="numeric"></div>
+        <div><label class="h" for="nbHide">番号を隠すページ</label><input type="text" id="nbHide" placeholder="例：1-2, 42" autocomplete="off"></div>
+      </div>
+      <p class="hint">開始ページ番号は、今の並びの1ページ目に割り当てる番号です。表紙や扉など番号を出したくないページは番号で指定します（数えたまま非表示になり、タイトルも出ません）。</p>
+      <div class="field grid3">
+        <div><label class="h" for="nbSize">文字サイズ</label><span class="unit"><input type="number" id="nbSize" min="5" max="24" step="0.5" value="9" inputmode="decimal"><em>pt</em></span></div>
+        <div><label class="h" for="nbVdist">上下から</label><span class="unit"><input type="number" id="nbVdist" min="0" max="60" step="0.5" value="10" inputmode="decimal"><em>mm</em></span></div>
+        <div><label class="h" for="nbOuter">外側から</label><span class="unit"><input type="number" id="nbOuter" min="0" max="60" step="0.5" value="12" inputmode="decimal"><em>mm</em></span></div>
+      </div>
+      <div class="field">
+        <label class="h">書体</label>
+        <div class="seg">
+          <label><input type="radio" name="nbFace" value="serif" checked>明朝系</label>
+          <label><input type="radio" name="nbFace" value="sans">ゴシック系</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="box">
+      <h3>タイトル（柱）</h3>
+      <div class="field">
+        <label class="h" for="nbTitle">タイトル（任意）</label>
+        <input type="text" id="nbTitle" placeholder="例：Coral pea" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="h">表示位置</label>
+        <div class="seg two-rows">
+          <label><input type="radio" name="nbTitlePos" value="top-outer" checked>上・外側</label>
+          <label><input type="radio" name="nbTitlePos" value="top-center">上・中央</label>
+          <label><input type="radio" name="nbTitlePos" value="bottom-outer">下・外側</label>
+          <label><input type="radio" name="nbTitlePos" value="bottom-center">下・中央</label>
+        </div>
+        <p class="hint">ページ番号と同じ位置のときは、番号の内側に並べます。日本語のタイトルは高解像度（600dpi）の画像として入ります。</p>
+      </div>
+      <div class="field">
+        <label class="h">表示するページ</label>
+        <div class="seg">
+          <label><input type="checkbox" id="nbTitleL" checked>左ページ</label>
+          <label><input type="checkbox" id="nbTitleR">右ページ</label>
+        </div>
+      </div>
+    </section>
+
+    <section class="box" id="nbResult">
+      <h3>仕上がり</h3>
+      <p class="nb-status" id="nbStatus">「番号を付ける」を押すと、仕上がりを見開きで確認できます。</p>
+      <div id="nbWarn"></div>
+      <div class="sps" id="nbSpreads"></div>
+      <div class="pager" id="nbPager" hidden>
+        <button class="btn" id="nbPrev">‹ 前へ</button>
+        <span id="nbRange"></span>
+        <button class="btn" id="nbNext">次へ ›</button>
+      </div>
+      <div class="field" id="nbNameBox" hidden>
+        <label class="h" for="nbName">ファイル名</label>
+        <input type="text" id="nbName">
+      </div>
+    </section>
+  </div></div>
+  <div class="nb-actions">
+    <button class="btn" id="nbRun">番号を付ける</button>
+    <button class="btn primary" id="nbSave" disabled>保存</button>
+  </div>
+</div>
+
+<input type="file" id="file" accept="application/pdf,.pdf" hidden>
+<div class="toast" id="toast"></div>
+<div class="busy" id="busy">処理中…</div>
+
 <script>
 /* ===== ここを書き換えてください ===== */
-const X_ACCOUNT = "";   // お問い合わせ用のXアカウント（例："@harutsumugi"）。空のままだと「準備中」と表示されます。
-const APP_VERSION = "1.1.0";
+const X_ACCOUNT = "@H4ru_ycy";   // お問い合わせ用のXアカウント。空にすると「準備中」と表示されます。
+const APP_VERSION = "2.0.0";
 const HISTORY = [
-  { ver: "1.1.0", date: "2026-10-05", notes: [
-    "プレビューを左右の見開き表示に変更（綴じ方向に合わせて並べ、片側だけの見開きは白ページで表示）"
+  { ver: "2.0.0", date: "2026-11-04", notes: [
+    "ページ番号追加ツールを統合。並べ替えたページにそのままページ番号（ノンブル）とタイトル（柱）を入れて保存できるように",
+    "ページ番号の画面で、仕上がりを左右の見開きで確認できるように",
+    "バージョン表記・更新履歴・お問い合わせを追加"
   ]},
-  { ver: "1.0.0", date: "2026-10-05", notes: [
-    "初版公開",
-    "ページ番号の位置：上・外側／下・中央／下・外側",
-    "タイトル（柱）の位置：上・下の中央／外側、左ページ・右ページごとに表示を選択",
-    "仕上がりサイズ（A6・B6・A5・B5・A5正方形・B5正方形、塗り足し3mmあり・なし）",
-    "とじしろのあり・なし、PDFの1枚目を左右どちらのページから始めるかを選択",
-    "番号を隠すページの指定、仕上がりのプレビュー"
+  { ver: "1.0.0", date: "2026-11-03", notes: [
+    "PDF編成ツール初版：PDFの差し込み（位置・範囲指定）、並べ替え、回転、削除、長押しで拡大プレビュー"
   ]}
 ];
 /* =================================== */
+</script>
+<script>
+(function(){
+const libOk = typeof PDFLib !== 'undefined' && typeof pdfjsLib !== 'undefined';
+const $ = id => document.getElementById(id);
+if (!libOk) { document.body.innerHTML = '<p style="padding:20px">ライブラリの読み込みに失敗しました。ページを再読み込みしてください。</p>'; return; }
+const { PDFDocument, degrees, StandardFonts, rgb } = PDFLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-(() => {
-  const $ = id => document.getElementById(id);
-  const MM = 72 / 25.4;
-  const PER_VIEW = 3;   // 1画面に出す見開き数
-  const SIZES = { a6:[105,148], b6:[128,182], a5:[148,210], b5:[182,257], a5sq:[148,148], b5sq:[182,182] };
-  let src = null, out = null, pvDoc = null, pvStart = 1, downloads = null;
+const COLORS = ['#3b6ea8','#d0492a','#2f7a55','#8a4fb0','#b07d1f','#c23b6b','#2f8a96','#5d6b2f'];
+const sources = {};   // id -> {id, letter, name, color, lib, js, n, thumbs:{}}
+let pages = [];       // {uid, src, idx, rot}
+let undo = [];
+let selected = null;  // uid
+let pending = null;   // source id waiting to be inserted
+let insertAt = 0;     // index in pages where new pages go (0 = top)
+let srcCount = 0, uidCount = 0;
 
-  if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+/* ---------- utils ---------- */
+let toastT;
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400); }
+function busy(on, msg){ $('busy').textContent = msg||'処理中…'; $('busy').classList.toggle('show', on); }
+function snapshot(){ undo.push(pages.map(p=>({...p}))); if (undo.length>50) undo.shift(); }
+function pickFile(){ return new Promise(res=>{ const f=$('file'); f.value=''; f.onchange=()=>res(f.files[0]||null); f.click(); }); }
 
-  /* ---------- 設定 ---------- */
-  const radio = name => document.querySelector(`input[name="${name}"]:checked`).value;
-  const num = (id, def) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : def; };
-  function opts() {
-    const [paper, bleed] = $("paper").value.split(":");
-    return {
-      paper, bleed: +bleed,
-      gutter: radio("gutterOn") === "on" ? Math.max(0, num("gutter", 0)) : 0,
-      bind: radio("bind"), first: radio("first"),
-      numPos: radio("numPos"),
-      start: Math.max(1, Math.round(num("start", 1))),
-      hide: parseHide($("hide").value),
-      size: Math.min(24, Math.max(5, num("size", 9))),
-      vdist: Math.max(0, num("vdist", 10)),
-      outer: Math.max(0, num("outer", 12)),
-      face: radio("face"),
-      title: $("title").value.trim(), titlePos: radio("titlePos"),
-      titleL: $("titleL").checked, titleR: $("titleR").checked
-    };
-  }
-  function parseHide(s) {
-    const set = new Set();
-    s.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
-     .replace(/[〜～ー－−]/g, "-").replace(/[、，\s]+/g, ",")
-     .split(",").forEach(part => {
-      const m = part.trim().match(/^(\d+)(?:-(\d+))?$/);
-      if (!m) return;
-      let a = +m[1], b = m[2] ? +m[2] : a;
-      if (a > b) [a, b] = [b, a];
-      for (let i = a; i <= b && i - a < 5000; i++) set.add(i);
-    });
-    return set;
-  }
-  const sideOf = (i, o) => (i % 2 === 0) ? o.first : (o.first === "left" ? "right" : "left");
+async function loadSource(file){
+  const buf = new Uint8Array(await file.arrayBuffer());
+  let lib;
+  try { lib = await PDFDocument.load(buf, { ignoreEncryption:true }); }
+  catch(e){ throw new Error('PDFとして読み込めませんでした'); }
+  const js = await pdfjsLib.getDocument({ data: buf.slice() }).promise;
+  const id = 's' + (++srcCount);
+  const letter = String.fromCharCode(64 + ((srcCount-1)%26) + 1);
+  sources[id] = { id, letter, name:file.name, color:COLORS[(srcCount-1)%COLORS.length], lib, js, n: lib.getPageCount(), thumbs:{} };
+  return id;
+}
 
-  // 1ページ分の「置き場所」をまとめる。h は left/center/right、items は左から順
-  function groupsFor(i, side, o) {
-    const n = o.start + i;
-    if (o.hide.has(n)) return [];
-    const map = {};
-    const put = (pos, item) => {
-      const [v, h] = pos.split("-");
-      const hh = h === "outer" ? side : "center";
-      const k = v + "-" + hh;
-      (map[k] = map[k] || { v, h: hh, items: [] }).items.push(item);
-    };
-    put(o.numPos, "n");
-    if (o.title && (side === "left" ? o.titleL : o.titleR)) put(o.titlePos, "t");
-    return Object.values(map).map(g => {
-      if (g.items.length > 1) g.items = g.h === "right" ? ["t", "n"] : ["n", "t"];
-      return g;
-    });
+/* ---------- thumbnails ---------- */
+const queue = []; let running = false;
+function thumb(p){
+  const s = sources[p.src]; const key = p.idx+'_'+p.rot;
+  if (s.thumbs[key]) return Promise.resolve(s.thumbs[key]);
+  return new Promise(res=>{ queue.push({s,p:{...p},key,res}); run(); });
+}
+async function run(){
+  if (running) return; running = true;
+  while (queue.length){
+    const {s,p,key,res} = queue.shift();
+    if (s.thumbs[key]) { res(s.thumbs[key]); continue; }
+    try{
+      const page = await s.js.getPage(p.idx+1);
+      const base = page.getViewport({ scale:1 });
+      const scale = 220 / Math.max(base.width, base.height);
+      const vp = page.getViewport({ scale, rotation: (page.rotate + p.rot) % 360 });
+      const c = document.createElement('canvas'); c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+      const ctx = c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      s.thumbs[key] = c.toDataURL('image/jpeg', .8);
+    }catch(e){ s.thumbs[key] = ''; }
+    res(s.thumbs[key]);
   }
-
-  // 用紙と本文の配置（pt）
-  function layout(srcW, srcH, side, o) {
-    const b = o.bleed * MM;
-    const [tw, th] = o.paper === "orig" ? [srcW, srcH] : SIZES[o.paper].map(v => v * MM);
-    const T = { x: b, y: b, w: tw, h: th };
-    const g = o.gutter * MM;
-    const A = { x: side === "right" ? T.x + g : T.x, y: T.y, w: Math.max(1, T.w - g), h: T.h };
-    const s = Math.min(A.w / srcW, A.h / srcH);
-    return { pw: tw + 2 * b, ph: th + 2 * b, T, x: A.x + (A.w - srcW * s) / 2, y: A.y + (A.h - srcH * s) / 2, s };
-  }
-
-  const FIELDS = ["paper","gutter","start","hide","size","vdist","outer","title"];
-  const RADIOS = ["gutterOn","bind","first","numPos","face","titlePos"];
-  const CHECKS = ["titleL","titleR"];
-  const KEY = "nombre-tool-settings-v1";
-  function saveSettings() {
-    try {
-      const o = {};
-      FIELDS.forEach(f => o[f] = $(f).value);
-      RADIOS.forEach(r => o[r] = radio(r));
-      CHECKS.forEach(c => o[c] = $(c).checked);
-      localStorage.setItem(KEY, JSON.stringify(o));
-    } catch (e) {}
-  }
-  function loadSettings() {
-    try {
-      const o = JSON.parse(localStorage.getItem(KEY) || "null");
-      if (!o) return;
-      FIELDS.forEach(f => { if (o[f] != null) $(f).value = o[f]; });
-      RADIOS.forEach(r => { const el = document.querySelector(`input[name="${r}"][value="${o[r]}"]`); if (el) el.checked = true; });
-      CHECKS.forEach(c => { if (typeof o[c] === "boolean") $(c).checked = o[c]; });
-      if (!$("paper").value) $("paper").value = "orig:0";
-    } catch (e) {}
-  }
-  const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-
-  /* ---------- 見開き図 ---------- */
-  function drawSpread() {
-    const o = opts();
-    $("gutter").disabled = radio("gutterOn") !== "on";
-    // 見開きの組を探す（右綴じ：右→左、左綴じ：左→右）
-    const firstSide = o.bind === "right" ? "right" : "left";
-    let i0 = 2;
-    while (sideOf(i0, o) !== firstSide) i0++;
-    const pair = [i0, i0 + 1];
-    const byPos = {}; pair.forEach(i => byPos[sideOf(i, o)] = i);
-    const [sw, sh] = src ? [src.w, src.h] : (o.paper === "orig" ? [148 * MM, 210 * MM] : SIZES[o.paper].map(v => v * MM));
-    const L = layout(sw, sh, "left", o);
-    const pct = (v, total) => (v / total * 100).toFixed(2) + "%";
-    const pageHtml = side => {
-      const i = byPos[side], n = o.start + i;
-      const lay = layout(sw, sh, side, o);
-      const { pw, ph, T } = lay;
-      let h = `<div class="page ${o.bind === "right" ? "v" : "h"}" style="aspect-ratio:${pw.toFixed(1)}/${ph.toFixed(1)}">`;
-      if (o.gutter > 0) {
-        const gw = o.gutter * MM;
-        h += `<div class="gut" style="${side === "left" ? "left:" + pct(T.x + T.w - gw, pw) : "left:" + pct(T.x, pw)};width:${pct(gw, pw)}"></div>`;
-      }
-      if (o.bleed > 0) h += `<div class="trim" style="left:${pct(T.x, pw)};right:${pct(T.x, pw)};top:${pct(T.y, ph)};bottom:${pct(T.y, ph)}"></div>`;
-      // 本文（余白込みの目安）
-      const cx = lay.x + sw * lay.s * 0.13, cw = sw * lay.s * 0.74;
-      const cyTop = ph - (lay.y + sh * lay.s * 0.87), chh = sh * lay.s * 0.72;
-      h += `<div class="body" style="left:${pct(cx, pw)};width:${pct(cw, pw)};top:${pct(cyTop, ph)};height:${pct(chh, ph)}"></div>`;
-      h += `<div class="side"><span>${side === "left" ? "左" : "右"}ページ</span></div>`;
-      groupsFor(i, side, o).forEach(g => {
-        const inner = g.items.map(it => it === "n" ? `<b>${n}</b>` : `<i>${esc(o.title)}</i>`).join("");
-        const vEdge = Math.max(4, (T.y + o.vdist * MM) / ph * 100);
-        const v = g.v === "top" ? `top:${vEdge.toFixed(1)}%` : `bottom:${vEdge.toFixed(1)}%`;
-        const hEdge = ((T.x + o.outer * MM) / pw * 100).toFixed(1) + "%";
-        const hs = g.h === "left" ? `left:${hEdge}` : g.h === "right" ? `right:${hEdge}` : "left:50%;transform:translateX(-50%)";
-        h += `<div class="slot" style="${v};${hs}">${inner}</div>`;
-      });
-      return h + "</div>";
-    };
-    $("spread").innerHTML = pageHtml("left") + pageHtml("right");
-    const nL = o.start + byPos.left, nR = o.start + byPos.right;
-    $("spreadCap").textContent = `左ページ p.${nL}${o.hide.has(nL) ? "（番号なし）" : ""} ／ 右ページ p.${nR}${o.hide.has(nR) ? "（番号なし）" : ""}`;
-    const leg = [];
-    if (o.gutter > 0) leg.push(`<span><i style="background:var(--gutter)"></i>とじしろ ${o.gutter}mm</span>`);
-    if (o.bleed > 0) leg.push(`<span><i style="border:1px dashed var(--nombre)"></i>仕上がり線（外側3mmは塗り足し）</span>`);
-    $("legend").innerHTML = leg.join("");
-  }
-
-  /* ---------- 読み込み ---------- */
-  async function loadFile(f) {
-    if (!f) return;
-    $("loadStatus").className = "status";
-    if (!/\.pdf$/i.test(f.name) && f.type !== "application/pdf") {
-      $("loadStatus").className = "status err";
-      $("loadStatus").textContent = "PDFファイルを選んでください。";
-      return;
-    }
-    $("loadStatus").textContent = "読み込み中…";
-    try {
-      const bytes = new Uint8Array(await f.arrayBuffer());
-      const doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
-      if (doc.isEncrypted) throw new Error("encrypted");
-      const p = doc.getPage(0).getCropBox();
-      src = { bytes, name: f.name.replace(/\.pdf$/i, ""), pages: doc.getPageCount(), w: p.width, h: p.height };
-      $("fi-name").textContent = f.name;
-      $("fi-pages").textContent = `${src.pages} ページ`;
-      $("fi-size").textContent = `${(p.width / MM).toFixed(0)} × ${(p.height / MM).toFixed(0)} mm（${paperName(p.width / MM, p.height / MM)}）`;
-      $("fileinfo").hidden = false;
-      $("loadStatus").textContent = "";
-      $("run").disabled = false;
-      setStatus("設定を確認して「ページ番号を付ける」を押してください。");
-      resetOutput(); drawSpread();
-    } catch (e) {
-      src = null; $("run").disabled = true; $("fileinfo").hidden = true;
-      $("loadStatus").className = "status err";
-      $("loadStatus").textContent = e.message === "encrypted"
-        ? "パスワードや編集制限がかかったPDFは扱えません。制限を外したPDFを書き出して選び直してください。"
-        : "このPDFを読み込めませんでした。ファイルが壊れていないか確認してください。";
-    } finally { $("file").value = ""; }
-  }
-  function paperName(w, h) {
-    const a = Math.min(w, h), b = Math.max(w, h);
-    const names = { a6:"A6", b6:"B6", a5:"A5", b5:"B5", a5sq:"A5正方形", b5sq:"B5正方形" };
-    for (const [k, [x, y]] of Object.entries(SIZES)) {
-      if (Math.abs(x - a) < 1.5 && Math.abs(y - b) < 1.5) return names[k];
-      if (Math.abs(x + 6 - a) < 1.5 && Math.abs(y + 6 - b) < 1.5) return names[k] + "＋塗り足し";
-    }
-    return "その他";
-  }
-  const setStatus = (t, cls = "") => { $("runStatus").className = "status " + cls; $("runStatus").textContent = t; };
-
-  /* ---------- 日本語タイトルを画像にする ---------- */
-  async function titleImage(text, sizePt, face) {
-    const scale = 600 / 72, px = sizePt * scale;
-    const family = face === "serif" ? '"Noto Serif JP", "Shippori Mincho", serif' : '"Zen Kaku Gothic New", sans-serif';
-    const font = `${px}px ${family}`;
-    try { await document.fonts.load(font, text); } catch (e) {}
-    const c = document.createElement("canvas");
-    let ctx = c.getContext("2d"); ctx.font = font;
-    const w = Math.ceil(ctx.measureText(text).width) + 4;
-    const h = Math.ceil(px * 1.5), base = Math.round(px * 1.15);
-    c.width = w; c.height = h;
-    ctx = c.getContext("2d"); ctx.font = font; ctx.fillStyle = "#000"; ctx.textBaseline = "alphabetic";
-    ctx.fillText(text, 2, base);
-    const blob = await new Promise(r => c.toBlob(r, "image/png"));
-    return { bytes: new Uint8Array(await blob.arrayBuffer()), w: w / scale, h: h / scale, below: (h - base) / scale, pad: 2 / scale };
-  }
-
-  /* ---------- 番号付け ---------- */
-  async function run() {
-    if (!src) return;
-    const o = opts();
-    $("run").disabled = true; $("save").disabled = true;
-    setStatus("処理中…"); $("warnBox").innerHTML = "";
-    try {
-      const { PDFDocument, StandardFonts, rgb } = PDFLib;
-      const srcDoc = await PDFDocument.load(src.bytes, { ignoreEncryption: true });
-      const inPlace = o.paper === "orig" && o.bleed === 0 && o.gutter === 0;
-      const doc = inPlace ? srcDoc : await PDFDocument.create();
-      const font = await doc.embedFont(o.face === "serif" ? StandardFonts.TimesRoman : StandardFonts.Helvetica);
-      const ascii = /^[\x20-\x7E]*$/.test(o.title);
-      let img = null, imgInfo = null;
-      if (o.title && !ascii) { imgInfo = await titleImage(o.title, o.size, o.face); img = await doc.embedPng(imgInfo.bytes); }
-      const gap = o.size * 1.6;
-      const black = rgb(0, 0, 0);
-      const srcPages = srcDoc.getPages();
-      let embedded = [];
-      if (!inPlace) {
-        const boxes = srcPages.map(p => { const b = p.getCropBox(); return { left: b.x, bottom: b.y, right: b.x + b.width, top: b.y + b.height }; });
-        embedded = await doc.embedPages(srcPages, boxes);
-      }
-      let rotated = 0, placed = 0, scaled = 0;
-      for (let i = 0; i < srcPages.length; i++) {
-        const sp = srcPages[i];
-        if (sp.getRotation().angle % 360 !== 0) rotated++;
-        const side = sideOf(i, o);
-        const cb = sp.getCropBox();
-        const lay = layout(cb.width, cb.height, side, o);
-        let page, T;
-        if (inPlace) {
-          page = sp; T = { x: cb.x, y: cb.y, w: cb.width, h: cb.height };
-        } else {
-          page = doc.addPage([lay.pw, lay.ph]);
-          page.drawPage(embedded[i], { x: lay.x, y: lay.y, xScale: lay.s, yScale: lay.s });
-          if (lay.s < 0.995) scaled++;
-          T = lay.T;
-        }
-        const n = o.start + i;
-        const groups = groupsFor(i, side, o);
-        if (groups.length) placed++;
-        for (const g of groups) {
-          const parts = g.items.map(it => {
-            if (it === "n") { const t = String(n); return { it, w: font.widthOfTextAtSize(t, o.size), t }; }
-            return { it, w: img ? imgInfo.w - 2 * imgInfo.pad : font.widthOfTextAtSize(o.title, o.size) };
-          });
-          const total = parts.reduce((s, p) => s + p.w, 0) + gap * (parts.length - 1);
-          let x = g.h === "left" ? T.x + o.outer * MM
-                : g.h === "right" ? T.x + T.w - o.outer * MM - total
-                : T.x + (T.w - total) / 2;
-          const baseY = g.v === "top" ? T.y + T.h - o.vdist * MM - o.size * 0.68 : T.y + o.vdist * MM;
-          for (const p of parts) {
-            if (p.it === "n") page.drawText(p.t, { x, y: baseY, size: o.size, font, color: black });
-            else if (img) page.drawImage(img, { x: x - imgInfo.pad, y: baseY - imgInfo.below, width: imgInfo.w, height: imgInfo.h });
-            else page.drawText(o.title, { x, y: baseY, size: o.size, font, color: black });
-            x += p.w + gap;
-          }
-        }
-      }
-      out = await doc.save();
-      const last = o.start + src.pages - 1;
-      setStatus(`${placed}ページに番号を付けました（p.${o.start}〜${last}）。プレビューを確認して保存してください。`, "ok");
-      const warns = [];
-      if (rotated) warns.push(`${rotated}ページが回転して保存されたPDFです。向きや番号の位置がずれている場合は、回転のないPDFを書き出して試してください。`);
-      if (scaled && o.paper !== "orig") warns.push(`${scaled}ページは、選んだサイズやとじしろに合わせて縮小して配置しました。`);
-      $("warnBox").innerHTML = warns.map(w => `<p class="warn">${w}</p>`).join("");
-      $("save").disabled = false;
-      await openPreview();
-    } catch (e) {
-      console.error(e);
-      setStatus("番号を付けられませんでした。別の書き出し設定のPDFで試してください。", "err");
-    } finally { $("run").disabled = !src; }
-  }
-  function resetOutput() {
-    out = null; pvDoc = null; $("save").disabled = true;
-    $("thumbs").innerHTML = ""; $("pager").hidden = true; $("pvEmpty").hidden = false;
-    $("pvEmpty").textContent = "番号を付けると、仕上がりを見開きで確認できます。";
-    $("warnBox").innerHTML = "";
-  }
-
-  /* ---------- プレビュー ---------- */
-  async function openPreview() {
-    $("pvEmpty").hidden = true;
-    const fail = () => { $("pvEmpty").hidden = false; $("pvEmpty").textContent = "プレビューを表示できませんでした。保存したPDFで確認してください。"; };
-    if (!window.pdfjsLib) return fail();
-    try { pvDoc = await pdfjsLib.getDocument({ data: out.slice() }).promise; pvStart = 1; await renderThumbs(); }
-    catch (e) { fail(); }
-  }
-  // 見開きの組を作る（右綴じは右→左、左綴じは左→右の順にめくる）
-  function buildSpreads(o, total) {
-    const lead = o.bind === "right" ? "right" : "left";
-    const list = []; let cur = null;
-    for (let i = 0; i < total; i++) {
-      const s = sideOf(i, o);
-      if (!cur || s === lead || cur[s] != null) { cur = { left: null, right: null }; list.push(cur); }
-      cur[s] = i;
-    }
-    return list;
-  }
-  let spreads = [], renderToken = 0;
-  async function renderThumbs() {
-    const o = opts(), total = pvDoc.numPages;
-    spreads = buildSpreads(o, total);
-    const end = Math.min(spreads.length, pvStart + PER_VIEW - 1);
-    const token = ++renderToken;
-    const box = $("thumbs"); box.innerHTML = "";
-    $("pager").hidden = spreads.length <= PER_VIEW;
-    $("pvRange").textContent = `見開き ${pvStart}–${end} / ${spreads.length}`;
-    $("prev").disabled = pvStart <= 1; $("next").disabled = end >= spreads.length;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const label = i => { const n = o.start + i; return o.hide.has(n) ? "番号なし" : "p." + n; };
-    for (let k = pvStart; k <= end; k++) {
-      const sp = spreads[k - 1];
-      const fig = document.createElement("figure"); fig.className = "sp";
-      const pagesEl = document.createElement("div"); pagesEl.className = "sp-pages";
-      const cap = document.createElement("figcaption");
-      cap.innerHTML = `<span>左　${sp.left != null ? label(sp.left) : "（白）"}</span><span>右　${sp.right != null ? label(sp.right) : "（白）"}</span>`;
-      fig.append(pagesEl, cap); box.appendChild(fig);
-      const slots = {};
-      for (const side of ["left", "right"]) {
-        const d = document.createElement("div"); d.className = "sp-page " + side;
-        pagesEl.appendChild(d); slots[side] = d;
-      }
-      let ratio = null;
-      for (const side of ["left", "right"]) {
-        const i = sp[side];
-        if (i == null) continue;
-        const page = await pvDoc.getPage(i + 1);
-        if (token !== renderToken) return;
-        const vp0 = page.getViewport({ scale: 1 });
-        ratio = `${vp0.width.toFixed(1)}/${vp0.height.toFixed(1)}`;
-        const vp = page.getViewport({ scale: (260 / vp0.width) * dpr });
-        const c = document.createElement("canvas");
-        c.width = Math.round(vp.width); c.height = Math.round(vp.height);
-        slots[side].appendChild(c);
-        await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
-        if (token !== renderToken) return;
-      }
-      for (const side of ["left", "right"]) if (sp[side] == null) { slots[side].classList.add("blank"); slots[side].style.aspectRatio = ratio; }
-    }
-  }
-
-  /* ---------- 保存 ---------- */
-  async function save() {
-    if (!out) return;
-    const filename = `${src.name}_ノンブル付き.pdf`;
-    const blob = new Blob([out], { type: "application/pdf" });
-    if (downloads) {
-      try { await downloads.save({ filename, data: blob }); setStatus("保存しました。", "ok"); }
-      catch (e) {
-        if (e && e.code === "declined") return;
-        setStatus(e && e.code === "rate_limited" ? "保存の確認画面がすでに開いています。少し待ってからもう一度押してください。" : "保存できませんでした。もう一度お試しください。", "err");
-      }
-      return;
-    }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename; document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 5000);
-    setStatus("保存を開始しました。ダウンロードフォルダを確認してください。", "ok");
-  }
-
-  /* ---------- フッター ---------- */
-  function drawFooter() {
-    $("verBadge").textContent = "v" + APP_VERSION;
-    const h = X_ACCOUNT.replace(/^@/, "").trim();
-    $("contactText").innerHTML = h
-      ? `不具合のご報告やご要望は、X（旧Twitter）の <a href="https://x.com/${encodeURIComponent(h)}" target="_blank" rel="noopener">@${esc(h)}</a> までお気軽にどうぞ。`
-      : "お問い合わせ先は準備中です。";
-    $("historyList").innerHTML = HISTORY.map(r =>
-      `<li><div class="h-head"><b>v${esc(r.ver)}</b><span>${esc(r.date)}</span></div><ul>${r.notes.map(n => `<li>${esc(n)}</li>`).join("")}</ul></li>`).join("");
-    $("historyBox").open = HISTORY.length <= 1;
-    $("copy").textContent = `ページ番号追加ツール v${APP_VERSION}`;
-  }
-
-  /* ---------- イベント ---------- */
-  loadSettings(); drawFooter(); drawSpread();
-  $("file").addEventListener("change", e => loadFile(e.target.files[0]));
-  const drop = $("drop");
-  ["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
-  ["dragleave","drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
-  drop.addEventListener("drop", e => loadFile(e.dataTransfer.files[0]));
-  document.querySelectorAll(".fields input, .fields select").forEach(el => {
-    const ev = el.matches("select, [type=radio], [type=checkbox]") ? "change" : "input";
-    el.addEventListener(ev, () => {
-      if (el.name === "bind") {   // 綴じ方向に合わせて1枚目の左右を初期化
-        const v = el.value === "right" ? "left" : "right";
-        document.querySelector(`input[name="first"][value="${v}"]`).checked = true;
-      }
-      drawSpread(); saveSettings();
-      if (out) { resetOutput(); setStatus("設定を変えました。もう一度「ページ番号を付ける」を押してください。"); }
-    });
+  running = false;
+}
+const io = new IntersectionObserver(ents=>{
+  ents.forEach(en=>{
+    if (!en.isIntersecting) return;
+    const img = en.target; io.unobserve(img);
+    const p = pages.find(x=>x.uid==img.dataset.uid); if (!p) return;
+    thumb(p).then(url=>{ if (url && img.isConnected) img.src = url; });
   });
-  $("run").addEventListener("click", run);
-  $("save").addEventListener("click", save);
-  $("prev").addEventListener("click", () => { pvStart = Math.max(1, pvStart - PER_VIEW); renderThumbs(); });
-  $("next").addEventListener("click", () => { pvStart += PER_VIEW; renderThumbs(); });
-  if (window.claude && typeof window.claude.use === "function") {
-    window.claude.use("downloads").then(d => { downloads = d; }).catch(() => {});
+}, { rootMargin:'300px' });
+
+/* ---------- render ---------- */
+function render(){
+  const has = pages.length > 0;
+  $('empty').hidden = has; $('count').hidden = !has;
+  $('bExport').disabled = !has; $('bNombre').disabled = !has || pending!==null; $('bUndo').disabled = undo.length===0; $('bReset').disabled = !has && undo.length===0;
+  $('count').textContent = `全 ${pages.length} ページ` + (pending!==null ? '　— 差し込む位置をタップで指定できます' : '　— タップで移動・回転・削除／長押しで拡大表示');
+  document.body.classList.toggle('picking', pending!==null);
+
+  // legend
+  const used = [...new Set(pages.map(p=>p.src))];
+  if (pending && !used.includes(pending)) used.push(pending);
+  $('legend').innerHTML = used.map(id=>{ const s=sources[id]; return `<div class="chip"><b style="background:${s.color}">${s.letter}</b><span>${esc(s.name)}</span></div>`; }).join('');
+
+  const g = $('grid'); io.disconnect(); g.innerHTML = '';
+  pages.forEach((p,i)=>{
+    const s = sources[p.src];
+    const d = document.createElement('div');
+    d.className = 'card' + (p.uid===selected && pending===null ? ' sel':'');
+    d.dataset.i = i;
+    let lab = '';
+    if (pending!==null){
+      if (insertAt===i){ d.classList.add('ins-before'); lab = '<div class="inslabel">ここに入る</div>'; }
+      else if (insertAt===pages.length && i===pages.length-1){ d.classList.add('ins-after'); lab = '<div class="inslabel">ここに入る</div>'; }
+    }
+    const key = p.idx+'_'+p.rot;
+    d.innerHTML = `${lab}<div class="thumb"><img alt="" data-uid="${p.uid}"></div>
+      <div class="meta"><span class="no">${i+1}</span><span class="tag" style="background:${s.color}">${s.letter}·${p.idx+1}${p.rot?' ⟳':''}</span></div>`;
+    const img = d.querySelector('img');
+    if (s.thumbs[key]) img.src = s.thumbs[key]; else io.observe(img);
+    g.appendChild(d);
+  });
+  updateSelbar(); updatePosNow();
+}
+function esc(t){ return t.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- open / add ---------- */
+async function addFlow(){
+  const f = await pickFile(); if (!f) return;
+  busy(true,'読み込み中…');
+  let id;
+  try { id = await loadSource(f); } catch(e){ busy(false); toast(e.message||'読み込みに失敗しました'); return; }
+  busy(false);
+  if (pages.length === 0){
+    snapshot();
+    pages = Array.from({length:sources[id].n}, (_,k)=>({uid:++uidCount, src:id, idx:k, rot:0}));
+    render(); toast(`${sources[id].n}ページを読み込みました`); return;
   }
+  selected = null; pending = id;
+  $('insName').textContent = `${sources[id].letter}：${sources[id].name}（${sources[id].n}ページ）`;
+  document.querySelector('input[name=rng][value=all]').checked = true; $('rngBox').hidden = true; $('rngText').value = '';
+  document.querySelector('input[name=pos][value=end]').checked = true; $('afterBox').hidden = true;
+  $('afterNo').max = pages.length; $('afterNo').value = pages.length;
+  insertAt = pages.length; $('insErr').textContent = '';
+  $('insSheet').classList.add('open');
+  render();
+}
+$('bAdd').onclick = addFlow; $('bOpen').onclick = addFlow;
+
+function updatePosNow(){
+  if (pending===null) return;
+  const n = pages.length; let t;
+  if (insertAt===0) t = '先頭（1ページ目の前）に入ります';
+  else if (insertAt>=n) t = `末尾（${n}ページ目の後ろ）に入ります`;
+  else t = `${insertAt}ページ目と${insertAt+1}ページ目の間に入ります`;
+  $('posNow').textContent = t;
+}
+function setPosFromRadios(){
+  const v = document.querySelector('input[name=pos]:checked').value;
+  $('afterBox').hidden = v!=='after';
+  if (v==='top') insertAt = 0;
+  else if (v==='end') insertAt = pages.length;
+  else { let k = parseInt($('afterNo').value,10); if (isNaN(k)) return; insertAt = Math.max(1, Math.min(pages.length, k)); }
+  render(); showMarker();
+}
+document.querySelectorAll('input[name=pos]').forEach(r=>r.onchange=()=>{
+  if (r_val()==='after'){
+    // start from a page in the middle instead of the same place as 末尾
+    let k = (insertAt>0 && insertAt<pages.length) ? insertAt : 1;
+    $('afterNo').value = k;
+  }
+  setPosFromRadios();
+});
+function r_val(){ return document.querySelector('input[name=pos]:checked').value; }
+$('afterNo').oninput = setPosFromRadios;
+$('afterNo').onkeydown = e=>{ if (e.key==='Enter') e.target.blur(); };
+function stepAfter(d){ let k=parseInt($('afterNo').value,10)||1; k=Math.max(1,Math.min(pages.length,k+d)); $('afterNo').value=k; setPosFromRadios(); }
+$('afterMinus').onclick = ()=>stepAfter(-1);
+$('afterPlus').onclick = ()=>stepAfter(1);
+function showMarker(){
+  const c = document.querySelector('.card.ins-before, .card.ins-after'); if (!c) return;
+  const r = c.getBoundingClientRect(); const sh = $('insSheet').getBoundingClientRect().top; const hd = document.querySelector('header').getBoundingClientRect().bottom;
+  if (r.top < hd+8 || r.bottom > sh-8) window.scrollBy({ top: r.top - (hd + (sh-hd-r.height)/2), behavior:'smooth' });
+}
+document.querySelectorAll('input[name=rng]').forEach(r=>r.onchange=()=>{ $('rngBox').hidden = document.querySelector('input[name=rng]:checked').value!=='part'; });
+
+function parseRange(txt, n){
+  const out = [];
+  for (const part of txt.replace(/[，、]/g,',').replace(/[〜～ー−–]/g,'-').replace(/\s/g,'').split(',')){
+    if (!part) continue;
+    const m = part.match(/^(\d*)-(\d*)$/);
+    if (m){
+      const a = m[1]?+m[1]:1, b = m[2]?+m[2]:n;
+      if (a<1||b>n||a>b) throw new Error(`「${part}」は範囲外です（1〜${n}）`);
+      for (let k=a;k<=b;k++) out.push(k-1);
+    } else if (/^\d+$/.test(part)){
+      const k=+part; if (k<1||k>n) throw new Error(`「${part}」は範囲外です（1〜${n}）`); out.push(k-1);
+    } else throw new Error(`「${part}」が読み取れません`);
+  }
+  if (!out.length) throw new Error('ページ範囲を入力してください');
+  return out;
+}
+
+$('insOk').onclick = ()=>{
+  const s = sources[pending];
+  let idxs;
+  try{
+    idxs = document.querySelector('input[name=rng]:checked').value==='all'
+      ? Array.from({length:s.n},(_,k)=>k)
+      : parseRange($('rngText').value, s.n);
+  }catch(e){ $('insErr').textContent = e.message; return; }
+  snapshot();
+  const add = idxs.map(k=>({uid:++uidCount, src:pending, idx:k, rot:0}));
+  pages.splice(insertAt, 0, ...add);
+  const at = insertAt;
+  pending = null; $('insSheet').classList.remove('open');
+  render(); toast(`${add.length}ページを差し込みました（${at+1}〜${at+add.length}ページ目）`);
+};
+$('insCancel').onclick = ()=>{ pending = null; $('insSheet').classList.remove('open'); render(); };
+
+/* ---------- card taps ---------- */
+/* ---------- long press → preview ---------- */
+let lpTimer=null, lpStart=null, lpCard=null, lpFired=false;
+function lpCancel(){ clearTimeout(lpTimer); lpTimer=null; if (lpCard) lpCard.classList.remove('pressing'); lpCard=null; }
+$('grid').addEventListener('pointerdown', e=>{
+  const card = e.target.closest('.card'); if (!card) return;
+  lpFired=false; lpStart={x:e.clientX,y:e.clientY}; lpCard=card; card.classList.add('pressing');
+  lpTimer=setTimeout(()=>{ lpFired=true; const i=+card.dataset.i; lpCancel(); if (navigator.vibrate) try{navigator.vibrate(15)}catch(_){} openPreview(i); }, 480);
+});
+$('grid').addEventListener('pointermove', e=>{ if (lpTimer && lpStart && Math.hypot(e.clientX-lpStart.x, e.clientY-lpStart.y)>10) lpCancel(); });
+['pointerup','pointercancel','pointerleave'].forEach(ev=>$('grid').addEventListener(ev, lpCancel));
+$('grid').addEventListener('contextmenu', e=>e.preventDefault());
+
+let pvIndex=0, pvZoom=1, pvToken=0;
+const SIZES=[['A3',297,420],['A4',210,297],['A5',148,210],['A6',105,148],['B4',257,364],['B5',182,257],['B6',128,182],['はがき',100,148],['レター',215.9,279.4],['リーガル',215.9,355.6]];
+function sizeName(w,h){
+  const a=Math.min(w,h), b=Math.max(w,h);
+  const hit = SIZES.find(([,x,y])=>Math.abs(a-x)<=2 && Math.abs(b-y)<=2);
+  return hit ? `${hit[0]}${w>h?'（横）':'（縦）'}` : (w>h?'横長':'縦長');
+}
+function openPreview(i){ pvIndex=i; pvZoom=1; $('pv').classList.add('open'); document.body.style.overflow='hidden'; drawPreview(); }
+function closePreview(){ $('pv').classList.remove('open'); document.body.style.overflow=''; $('pvBody').innerHTML=''; pvToken++; }
+async function drawPreview(){
+  const p = pages[pvIndex]; if (!p){ closePreview(); return; }
+  const s = sources[p.src]; const token = ++pvToken;
+  $('pvTitle').textContent = `${pvIndex+1} / ${pages.length} ページ`;
+  $('pvPrev').disabled = pvIndex===0; $('pvNext').disabled = pvIndex===pages.length-1;
+  $('pvZoom').textContent = pvZoom>1 ? '全体表示' : '拡大';
+  // info
+  const lp = s.lib.getPage(p.idx);
+  const {width:wPt, height:hPt} = lp.getSize();
+  const baseRot = ((lp.getRotation().angle||0)%360+360)%360;
+  const totalRot = (baseRot + p.rot) % 360;
+  let wMm = wPt*25.4/72, hMm = hPt*25.4/72;
+  if (totalRot%180) [wMm,hMm]=[hMm,wMm];
+  const rows = [
+    ['ファイル', `${s.letter}：${esc(s.name)}`],
+    ['元のページ', `${p.idx+1} / ${s.n} ページ目`],
+    ['サイズ', `${wMm.toFixed(1)} × ${hMm.toFixed(1)} mm（${sizeName(wMm,hMm)}）`],
+    ['回転', p.rot ? `${p.rot}° 回転して保存` : 'なし'],
+  ];
+  $('pvInfo').innerHTML = rows.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
+  // render
+  const body = $('pvBody'); body.innerHTML = '<div class="pv-load">表示中…</div>';
+  try{
+    const page = await s.js.getPage(p.idx+1);
+    if (token!==pvToken) return;
+    const rot = (page.rotate + p.rot) % 360;
+    const base = page.getViewport({ scale:1, rotation:rot });
+    const availW = body.clientWidth - 20, availH = body.clientHeight - 12;
+    const fit = Math.min(availW/base.width, availH/base.height);
+    const cssScale = fit * pvZoom;
+    const dpr = Math.min(window.devicePixelRatio||1, 3);
+    let px = cssScale * dpr;
+    const maxPx = 4096; // keep canvas within mobile limits
+    px = Math.min(px, maxPx/Math.max(base.width, base.height));
+    const vp = page.getViewport({ scale:px, rotation:rot });
+    const c = document.createElement('canvas');
+    c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+    c.style.width = Math.floor(base.width*cssScale)+'px'; c.style.height = Math.floor(base.height*cssScale)+'px';
+    const ctx = c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
+    await page.render({ canvasContext:ctx, viewport:vp }).promise;
+    if (token!==pvToken) return;
+    body.innerHTML=''; body.appendChild(c); body.scrollTop=0; body.scrollLeft=0;
+  }catch(e){ if (token===pvToken) body.innerHTML = '<div class="pv-load">表示できませんでした</div>'; }
+}
+$('pvClose').onclick = closePreview;
+$('pvPrev').onclick = ()=>{ if (pvIndex>0){ pvIndex--; pvZoom=1; drawPreview(); } };
+$('pvNext').onclick = ()=>{ if (pvIndex<pages.length-1){ pvIndex++; pvZoom=1; drawPreview(); } };
+$('pvZoom').onclick = ()=>{ pvZoom = pvZoom>1 ? 1 : 2.5; drawPreview(); };
+$('pvBody').addEventListener('dblclick', ()=>$('pvZoom').click());
+// swipe left/right when not zoomed
+let sw=null;
+$('pvBody').addEventListener('touchstart', e=>{ if (pvZoom===1 && e.touches.length===1) sw={x:e.touches[0].clientX,y:e.touches[0].clientY}; else sw=null; }, {passive:true});
+$('pvBody').addEventListener('touchend', e=>{
+  if (!sw) return; const t=e.changedTouches[0]; const dx=t.clientX-sw.x, dy=t.clientY-sw.y; sw=null;
+  if (Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5){ (dx<0?$('pvNext'):$('pvPrev')).click(); }
+});
+
+$('grid').onclick = e=>{
+  if (lpFired){ lpFired=false; return; }
+  const card = e.target.closest('.card'); if (!card) return;
+  const i = +card.dataset.i;
+  if (pending!==null){
+    insertAt = i+1;
+    document.querySelector('input[name=pos][value=after]').checked = true;
+    $('afterBox').hidden = false; $('afterNo').value = i+1;
+    if (insertAt===pages.length){ document.querySelector('input[name=pos][value=end]').checked = true; $('afterBox').hidden = true; }
+    render(); return;
+  }
+  selected = selected===pages[i].uid ? null : pages[i].uid;
+  render();
+};
+
+/* ---------- selection bar ---------- */
+function updateSelbar(){
+  const on = selected!==null && pending===null && pages.some(p=>p.uid===selected);
+  $('selbar').classList.toggle('open', on);
+  if (on){ const i = pages.findIndex(p=>p.uid===selected); $('selInfo').textContent = `${i+1}ページ目`; }
+}
+$('selbar').onclick = e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  const act = b.dataset.act; const i = pages.findIndex(p=>p.uid===selected);
+  if (act==='close' || i<0){ selected=null; render(); return; }
+  const move = to => { if (to===i) return; snapshot(); const [p]=pages.splice(i,1); pages.splice(to,0,p); };
+  if (act==='first') move(0);
+  if (act==='last') move(pages.length-1);
+  if (act==='left' && i>0) move(i-1);
+  if (act==='right' && i<pages.length-1) move(i+1);
+  if (act==='rot'){ snapshot(); pages[i].rot = (pages[i].rot+90)%360; }
+  if (act==='del'){ snapshot(); pages.splice(i,1); selected=null; toast(`${i+1}ページ目を削除しました（↶ 戻すで元に戻せます）`); }
+  render();
+  const c = document.querySelector('.card.sel'); if (c) c.scrollIntoView({block:'nearest',behavior:'smooth'});
+};
+
+/* ---------- undo / reset ---------- */
+$('bUndo').onclick = ()=>{ if (!undo.length) return; pages = undo.pop(); selected=null; render(); };
+$('bReset').onclick = ()=>{
+  if ($('bReset').dataset.arm!=='1'){ $('bReset').dataset.arm='1'; $('bReset').textContent='本当に？'; setTimeout(()=>{ $('bReset').dataset.arm=''; $('bReset').textContent='リセット'; },2500); return; }
+  $('bReset').dataset.arm=''; $('bReset').textContent='リセット';
+  pages=[]; undo=[]; selected=null; pending=null; $('insSheet').classList.remove('open'); render();
+};
+
+/* ---------- export ---------- */
+$('bExport').onclick = ()=>{
+  selected=null; render();
+  const first = sources[pages[0].src].name.replace(/\.pdf$/i,'');
+  if (!$('expName').value) $('expName').value = first + '_編成.pdf';
+  $('expInfo').textContent = `${pages.length}ページのPDFを作成します`;
+  $('expErr').textContent = '';
+  $('expSheet').classList.add('open');
+};
+$('expCancel').onclick = ()=>$('expSheet').classList.remove('open');
+$('expOk').onclick = async ()=>{
+  let name = ($('expName').value.trim() || '編成.pdf').replace(/[\\/:*?"<>|]/g,'_');
+  if (!/\.pdf$/i.test(name)) name += '.pdf';
+  busy(true,'PDFを作成中…');
+  let bytes;
+  try{
+    const out = await PDFDocument.create();
+    const need = {};
+    pages.forEach(p=>{ (need[p.src] = need[p.src] || []).push(p.idx); });
+    const copied = {};
+    for (const sid in need){
+      const uniq = [...new Set(need[sid])];
+      // a page can appear more than once only if copied separately
+      copied[sid] = {};
+      const cp = await out.copyPages(sources[sid].lib, uniq);
+      uniq.forEach((ix,k)=>copied[sid][ix] = [cp[k]]);
+      const extra = need[sid].length - uniq.length;
+      if (extra>0){
+        const counts = {}; need[sid].forEach(ix=>counts[ix]=(counts[ix]||0)+1);
+        for (const ix of uniq){ for (let k=1;k<counts[ix];k++){ const [dup] = await out.copyPages(sources[sid].lib,[ix]); copied[sid][ix].push(dup); } }
+      }
+    }
+    for (const p of pages){
+      const pg = copied[p.src][p.idx].shift();
+      if (p.rot){ const cur = pg.getRotation().angle || 0; pg.setRotation(degrees((cur + p.rot) % 360)); }
+      out.addPage(pg);
+    }
+    bytes = await out.save();
+  }catch(e){ busy(false); $('expErr').textContent = '作成に失敗しました: ' + (e.message||e); return; }
+  busy(false);
+  const blob = new Blob([bytes], { type:'application/pdf' });
+
+  if (window.claude && typeof window.claude.use === 'function'){
+    let dl = null;
+    try { dl = await window.claude.use('downloads'); } catch(e){}
+    if (!dl){ $('expErr').textContent = 'この表示では保存できません。claude.ai のページで開き直してください。'; return; }
+    try { await dl.save({ filename:name, data:blob }); $('expSheet').classList.remove('open'); toast('保存しました'); }
+    catch(e){
+      if (e && e.code==='declined') { $('expErr').textContent = '保存がキャンセルされました'; }
+      else if (e && e.code==='rate_limited') { $('expErr').textContent = '少し待ってからもう一度お試しください'; }
+      else { $('expErr').textContent = 'この表示では保存できませんでした（' + (e&&e.code||'unknown') + '）'; }
+    }
+  } else {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 60000);
+    $('expSheet').classList.remove('open'); toast('保存しました');
+  }
+};
+
+/* ---------- info (version / contact / history) ---------- */
+function drawInfo(){
+  $('bInfo').textContent = 'v' + APP_VERSION;
+  $('infoVer').textContent = 'v' + APP_VERSION;
+  const h = String(X_ACCOUNT||'').replace(/^@/,'').trim();
+  $('infoContact').innerHTML = h
+    ? `不具合のご報告やご要望は、X（旧Twitter）の <a href="https://x.com/${encodeURIComponent(h)}" target="_blank" rel="noopener">@${esc(h)}</a> までお気軽にどうぞ。`
+    : 'お問い合わせ先は準備中です。';
+  $('infoHist').innerHTML = HISTORY.map(r=>`<li><div class="hh"><b>v${esc(r.ver)}</b><span>${esc(r.date)}</span></div><ul>${r.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></li>`).join('');
+}
+$('bInfo').onclick = ()=>{ $('insSheet').classList.remove('open'); $('expSheet').classList.remove('open'); $('infoSheet').classList.add('open'); };
+$('infoClose').onclick = ()=>$('infoSheet').classList.remove('open');
+drawInfo();
+
+/* ---------- page numbers (nombre) ---------- */
+const MM = 72/25.4;
+const NB_SIZES = { a6:[105,148], b6:[128,182], a5:[148,210], b5:[182,257], a5sq:[148,148], b5sq:[182,182] };
+const NB_PER_VIEW = 3;
+let nbOut = null, nbDoc = null, nbSpreadList = [], nbStartView = 1, nbToken = 0;
+const nbRadio = name => document.querySelector(`#nb input[name="${name}"]:checked`).value;
+const nbNum = (id, def) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : def; };
+function nbOpts(){
+  const [paper, bleed] = $('nbPaper').value.split(':');
+  return {
+    paper, bleed:+bleed,
+    gutter: nbRadio('nbGut')==='on' ? Math.max(0, nbNum('nbGutter',0)) : 0,
+    bind: nbRadio('nbBind'), first: nbRadio('nbFirst'),
+    numPos: nbRadio('nbNumPos'),
+    start: Math.max(1, Math.round(nbNum('nbStart',1))),
+    hide: parseHide($('nbHide').value),
+    size: Math.min(24, Math.max(5, nbNum('nbSize',9))),
+    vdist: Math.max(0, nbNum('nbVdist',10)),
+    outer: Math.max(0, nbNum('nbOuter',12)),
+    face: nbRadio('nbFace'),
+    title: $('nbTitle').value.trim(), titlePos: nbRadio('nbTitlePos'),
+    titleL: $('nbTitleL').checked, titleR: $('nbTitleR').checked
+  };
+}
+function parseHide(txt){
+  const set = new Set();
+  txt.replace(/[０-９]/g, c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+     .replace(/[〜～ー－−–]/g,'-').replace(/[、，\s]+/g,',')
+     .split(',').forEach(part=>{
+       const m = part.trim().match(/^(\d+)(?:-(\d+))?$/); if (!m) return;
+       let a=+m[1], b=m[2]?+m[2]:a; if (a>b) [a,b]=[b,a];
+       for (let i=a;i<=b && i-a<5000;i++) set.add(i);
+     });
+  return set;
+}
+const sideOf = (i,o) => (i%2===0) ? o.first : (o.first==='left' ? 'right' : 'left');
+// 1ページ分の置き場所。h は left/center/right、items は左から順（n=番号, t=タイトル）
+function groupsFor(i, side, o){
+  const n = o.start + i;
+  if (o.hide.has(n)) return [];
+  const map = {};
+  const put = (pos, item)=>{
+    const [v,h] = pos.split('-'); const hh = h==='outer' ? side : 'center';
+    const k = v+'-'+hh; (map[k] = map[k] || {v, h:hh, items:[]}).items.push(item);
+  };
+  put(o.numPos,'n');
+  if (o.title && (side==='left' ? o.titleL : o.titleR)) put(o.titlePos,'t');
+  return Object.values(map).map(g=>{ if (g.items.length>1) g.items = g.h==='right' ? ['t','n'] : ['n','t']; return g; });
+}
+// 用紙と本文の配置（pt）。w,h は回転後の見た目のサイズ
+function nbLayout(w, h, side, o){
+  const b = o.bleed*MM;
+  const [tw,th] = o.paper==='orig' ? [w,h] : NB_SIZES[o.paper].map(v=>v*MM);
+  const T = { x:b, y:b, w:tw, h:th };
+  const g = o.gutter*MM;
+  const A = { x: side==='right' ? T.x+g : T.x, y:T.y, w:Math.max(1,T.w-g), h:T.h };
+  const s = Math.min(A.w/w, A.h/h);
+  return { pw:tw+2*b, ph:th+2*b, T, x:A.x+(A.w-w*s)/2, y:A.y+(A.h-h*s)/2, s };
+}
+// 並びの中の1ページの元情報（回転を反映した見た目のサイズ）
+function pageGeom(p){
+  const lp = sources[p.src].lib.getPage(p.idx);
+  const cb = lp.getCropBox();
+  const R = ((((lp.getRotation().angle||0) + p.rot) % 360) + 360) % 360;
+  return { lp, cb, R, w: R%180 ? cb.height : cb.width, h: R%180 ? cb.width : cb.height };
+}
+
+/* settings */
+const NB_FIELDS = ['nbPaper','nbGutter','nbStart','nbHide','nbSize','nbVdist','nbOuter','nbTitle'];
+const NB_RADIOS = ['nbGut','nbBind','nbFirst','nbNumPos','nbFace','nbTitlePos'];
+const NB_CHECKS = ['nbTitleL','nbTitleR'];
+const NB_KEY = 'pdf-hensei-nombre-v1';
+function nbSaveSettings(){
+  try{
+    const o={}; NB_FIELDS.forEach(f=>o[f]=$(f).value); NB_RADIOS.forEach(r=>o[r]=nbRadio(r)); NB_CHECKS.forEach(c=>o[c]=$(c).checked);
+    localStorage.setItem(NB_KEY, JSON.stringify(o));
+  }catch(e){}
+}
+function nbLoadSettings(){
+  try{
+    const o = JSON.parse(localStorage.getItem(NB_KEY)||'null'); if (!o) return;
+    NB_FIELDS.forEach(f=>{ if (o[f]!=null) $(f).value = o[f]; });
+    NB_RADIOS.forEach(r=>{ const el=document.querySelector(`#nb input[name="${r}"][value="${o[r]}"]`); if (el) el.checked=true; });
+    NB_CHECKS.forEach(c=>{ if (typeof o[c]==='boolean') $(c).checked=o[c]; });
+    if (!$('nbPaper').value) $('nbPaper').value='orig:0';
+  }catch(e){}
+}
+
+/* spread diagram */
+function nbDiagram(){
+  const o = nbOpts();
+  $('nbGutter').disabled = nbRadio('nbGut')!=='on';
+  const total = Math.max(pages.length, 4);
+  const lead = o.bind==='right' ? 'right' : 'left';
+  let i0 = 2; while (sideOf(i0,o)!==lead) i0++;
+  const byPos = {}; [i0,i0+1].forEach(i=>byPos[sideOf(i,o)] = i);
+  const geomAt = i => { const p = pages[Math.min(i, pages.length-1)]; return p ? pageGeom(p) : { w:148*MM, h:210*MM }; };
+  const pct = (v,t)=>(v/t*100).toFixed(2)+'%';
+  const html = side=>{
+    const i = byPos[side], n = o.start+i, g = geomAt(i);
+    const L = nbLayout(g.w, g.h, side, o); const {pw,ph,T} = L;
+    let h = `<div class="mini ${o.bind==='right'?'v':'h'}" style="aspect-ratio:${pw.toFixed(1)}/${ph.toFixed(1)}">`;
+    if (o.gutter>0){ const gw=o.gutter*MM; h += `<div class="gut" style="left:${pct(side==='left'?T.x+T.w-gw:T.x,pw)};width:${pct(gw,pw)}"></div>`; }
+    if (o.bleed>0) h += `<div class="trim" style="left:${pct(T.x,pw)};right:${pct(T.x,pw)};top:${pct(T.y,ph)};bottom:${pct(T.y,ph)}"></div>`;
+    const cx = L.x + g.w*L.s*.13, cw = g.w*L.s*.74, top = ph-(L.y+g.h*L.s*.87), chh = g.h*L.s*.72;
+    h += `<div class="body" style="left:${pct(cx,pw)};width:${pct(cw,pw)};top:${pct(top,ph)};height:${pct(chh,ph)}"></div>`;
+    h += `<div class="side"><span>${side==='left'?'左':'右'}ページ</span></div>`;
+    groupsFor(i, side, o).forEach(gr=>{
+      const inner = gr.items.map(it=> it==='n' ? `<b>${n}</b>` : `<i>${esc(o.title)}</i>`).join('');
+      const ve = Math.max(4,(T.y+o.vdist*MM)/ph*100).toFixed(1)+'%';
+      const he = ((T.x+o.outer*MM)/pw*100).toFixed(1)+'%';
+      const hs = gr.h==='left' ? `left:${he}` : gr.h==='right' ? `right:${he}` : 'left:50%;transform:translateX(-50%)';
+      h += `<div class="slot" style="${gr.v==='top'?'top':'bottom'}:${ve};${hs}">${inner}</div>`;
+    });
+    return h+'</div>';
+  };
+  $('nbSpread').innerHTML = html('left') + html('right');
+  const nL = o.start+byPos.left, nR = o.start+byPos.right;
+  $('nbCap').textContent = `左ページ p.${nL}${o.hide.has(nL)?'（番号なし）':''} ／ 右ページ p.${nR}${o.hide.has(nR)?'（番号なし）':''}`;
+  const lg = [];
+  if (o.gutter>0) lg.push(`<span><i style="background:var(--gut)"></i>とじしろ ${o.gutter}mm</span>`);
+  if (o.bleed>0) lg.push(`<span><i style="border:1px dashed var(--accent)"></i>仕上がり線（外側3mmは塗り足し）</span>`);
+  $('nbLegend').innerHTML = lg.join('');
+  $('nbLead').textContent = `今の並び（全 ${pages.length} ページ）に番号を付けます。並びを変えたいときは閉じて編成し直してください。`;
+}
+
+/* title text → image (Japanese is not in the standard PDF fonts) */
+async function titleImage(text, sizePt, face){
+  const scale = 600/72, px = sizePt*scale;
+  const family = face==='serif' ? '"Noto Serif JP", serif' : '"Zen Kaku Gothic New", sans-serif';
+  const font = `${px}px ${family}`;
+  try{ await document.fonts.load(font, text); }catch(e){}
+  const c = document.createElement('canvas'); let ctx = c.getContext('2d'); ctx.font = font;
+  const w = Math.ceil(ctx.measureText(text).width)+4, h = Math.ceil(px*1.5), base = Math.round(px*1.15);
+  c.width = w; c.height = h; ctx = c.getContext('2d'); ctx.font = font; ctx.fillStyle = '#000'; ctx.fillText(text, 2, base);
+  const blob = await new Promise(r=>c.toBlob(r,'image/png'));
+  return { bytes:new Uint8Array(await blob.arrayBuffer()), w:w/scale, h:h/scale, below:(h-base)/scale, pad:2/scale };
+}
+
+function nbSetStatus(t, cls){ $('nbStatus').className = 'nb-status' + (cls?' '+cls:''); $('nbStatus').textContent = t; }
+function nbReset(msg){
+  nbOut = null; nbDoc = null; nbToken++;
+  $('nbSave').disabled = true; $('nbSpreads').innerHTML = ''; $('nbPager').hidden = true; $('nbWarn').innerHTML = ''; $('nbNameBox').hidden = true;
+  nbSetStatus(msg || '「番号を付ける」を押すと、仕上がりを見開きで確認できます。');
+}
+
+async function nbRun(){
+  if (!pages.length) return;
+  const o = nbOpts();
+  $('nbRun').disabled = true; $('nbSave').disabled = true;
+  busy(true, '番号を付けています…');
+  try{
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(o.face==='serif' ? StandardFonts.TimesRoman : StandardFonts.Helvetica);
+    let img = null, ii = null;
+    if (o.title && !/^[\x20-\x7E]*$/.test(o.title)){ ii = await titleImage(o.title, o.size, o.face); img = await doc.embedPng(ii.bytes); }
+    const gap = o.size*1.6, black = rgb(0,0,0), emb = {};
+    let placed = 0, scaled = 0;
+    for (let i=0;i<pages.length;i++){
+      const p = pages[i], g = pageGeom(p), side = sideOf(i,o);
+      const L = nbLayout(g.w, g.h, side, o);
+      const key = p.src+'_'+p.idx;
+      if (!emb[key]) emb[key] = await doc.embedPage(g.lp, { left:g.cb.x, bottom:g.cb.y, right:g.cb.x+g.cb.width, top:g.cb.y+g.cb.height });
+      const page = doc.addPage([L.pw, L.ph]);
+      const W = g.cb.width*L.s, H = g.cb.height*L.s;
+      const org = { 0:[L.x,L.y], 90:[L.x,L.y+W], 180:[L.x+W,L.y+H], 270:[L.x+H,L.y] }[g.R];
+      page.drawPage(emb[key], { x:org[0], y:org[1], xScale:L.s, yScale:L.s, rotate:degrees(-g.R) });
+      if (L.s < 0.995) scaled++;
+      const T = L.T, n = o.start+i, groups = groupsFor(i, side, o);
+      if (groups.length) placed++;
+      for (const gr of groups){
+        const parts = gr.items.map(it=> it==='n'
+          ? { it, t:String(n), w:font.widthOfTextAtSize(String(n), o.size) }
+          : { it, w: img ? ii.w-2*ii.pad : font.widthOfTextAtSize(o.title, o.size) });
+        const total = parts.reduce((a,q)=>a+q.w,0) + gap*(parts.length-1);
+        let x = gr.h==='left' ? T.x+o.outer*MM : gr.h==='right' ? T.x+T.w-o.outer*MM-total : T.x+(T.w-total)/2;
+        const y = gr.v==='top' ? T.y+T.h-o.vdist*MM-o.size*0.68 : T.y+o.vdist*MM;
+        for (const q of parts){
+          if (q.it==='n') page.drawText(q.t, { x, y, size:o.size, font, color:black });
+          else if (img) page.drawImage(img, { x:x-ii.pad, y:y-ii.below, width:ii.w, height:ii.h });
+          else page.drawText(o.title, { x, y, size:o.size, font, color:black });
+          x += q.w + gap;
+        }
+      }
+    }
+    nbOut = await doc.save();
+    busy(false);
+    nbSetStatus(`${placed}ページに番号を付けました（p.${o.start}〜${o.start+pages.length-1}）。見開きで確認して保存してください。`, 'ok');
+    const w = [];
+    if (scaled && o.paper!=='orig') w.push(`${scaled}ページは、選んだサイズやとじしろに合わせて縮小して配置しました。`);
+    if (o.paper==='orig' && o.gutter>0) w.push('元のサイズのままとじしろを空けたため、本文を少し縮小しています。');
+    $('nbWarn').innerHTML = w.map(t=>`<p class="nb-warn">${t}</p>`).join('');
+    const first = sources[pages[0].src].name.replace(/\.pdf$/i,'');
+    if (!$('nbName').value) $('nbName').value = first + '_ノンブル付き.pdf';
+    $('nbNameBox').hidden = false;
+    $('nbSave').disabled = false;
+    nbDoc = await pdfjsLib.getDocument({ data: nbOut.slice() }).promise;
+    nbStartView = 1; await nbRenderSpreads();
+    $('nbResult').scrollIntoView({ behavior:'smooth', block:'start' });
+  }catch(e){
+    console.error(e); busy(false);
+    nbSetStatus('番号を付けられませんでした：' + (e && e.message || e), 'err');
+  }finally{ $('nbRun').disabled = false; }
+}
+
+// 見開きの組（右綴じは右→左、左綴じは左→右の順にめくる）
+function buildSpreads(o, total){
+  const lead = o.bind==='right' ? 'right' : 'left'; const list = []; let cur = null;
+  for (let i=0;i<total;i++){
+    const sd = sideOf(i,o);
+    if (!cur || sd===lead || cur[sd]!=null){ cur = { left:null, right:null }; list.push(cur); }
+    cur[sd] = i;
+  }
+  return list;
+}
+async function nbRenderSpreads(){
+  if (!nbDoc) return;
+  const o = nbOpts(); nbSpreadList = buildSpreads(o, nbDoc.numPages);
+  const end = Math.min(nbSpreadList.length, nbStartView + NB_PER_VIEW - 1);
+  const token = ++nbToken, box = $('nbSpreads'); box.innerHTML = '';
+  $('nbPager').hidden = nbSpreadList.length <= NB_PER_VIEW;
+  $('nbRange').textContent = `見開き ${nbStartView}–${end} / ${nbSpreadList.length}`;
+  $('nbPrev').disabled = nbStartView<=1; $('nbNext').disabled = end>=nbSpreadList.length;
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  const label = i => { const n=o.start+i; return o.hide.has(n) ? '番号なし' : 'p.'+n; };
+  for (let k=nbStartView;k<=end;k++){
+    const sp = nbSpreadList[k-1];
+    const fig = document.createElement('figure'); fig.className = 'sp';
+    const row = document.createElement('div'); row.className = 'sp-pages';
+    const cap = document.createElement('figcaption');
+    cap.innerHTML = `<span>左　${sp.left!=null?label(sp.left):'（白）'}</span><span>右　${sp.right!=null?label(sp.right):'（白）'}</span>`;
+    fig.append(row, cap); box.appendChild(fig);
+    const slot = {}; ['left','right'].forEach(sd=>{ const d=document.createElement('div'); d.className='sp-page '+sd; row.appendChild(d); slot[sd]=d; });
+    let ratio = null;
+    for (const sd of ['left','right']){
+      const i = sp[sd]; if (i==null) continue;
+      const page = await nbDoc.getPage(i+1); if (token!==nbToken) return;
+      const v0 = page.getViewport({ scale:1 }); ratio = `${v0.width.toFixed(1)}/${v0.height.toFixed(1)}`;
+      const vp = page.getViewport({ scale:(230/v0.width)*dpr });
+      const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+      slot[sd].appendChild(c);
+      const ctx = c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
+      await page.render({ canvasContext:ctx, viewport:vp }).promise; if (token!==nbToken) return;
+    }
+    ['left','right'].forEach(sd=>{ if (sp[sd]==null && ratio) slot[sd].style.aspectRatio = ratio; });
+  }
+}
+$('nbPrev').onclick = ()=>{ nbStartView = Math.max(1, nbStartView-NB_PER_VIEW); nbRenderSpreads(); };
+$('nbNext').onclick = ()=>{ nbStartView += NB_PER_VIEW; nbRenderSpreads(); };
+
+async function saveBlob(blob, name){
+  if (window.claude && typeof window.claude.use === 'function'){
+    let dl = null; try{ dl = await window.claude.use('downloads'); }catch(e){}
+    if (!dl) return { ok:false, msg:'この表示では保存できません。claude.ai のページで開き直してください。' };
+    try{ await dl.save({ filename:name, data:blob }); return { ok:true }; }
+    catch(e){
+      if (e && e.code==='declined') return { ok:false, msg:'保存がキャンセルされました' };
+      if (e && e.code==='rate_limited') return { ok:false, msg:'少し待ってからもう一度お試しください' };
+      return { ok:false, msg:'この表示では保存できませんでした（' + (e&&e.code||'unknown') + '）' };
+    }
+  }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 60000);
+  return { ok:true };
+}
+$('nbSave').onclick = async ()=>{
+  if (!nbOut) return;
+  let name = ($('nbName').value.trim() || 'ノンブル付き.pdf').replace(/[\\/:*?"<>|]/g,'_');
+  if (!/\.pdf$/i.test(name)) name += '.pdf';
+  const r = await saveBlob(new Blob([nbOut], { type:'application/pdf' }), name);
+  if (r.ok) toast('保存しました'); else nbSetStatus(r.msg, 'err');
+};
+
+function nbOpen(){
+  if (!pages.length) return;
+  selected = null; render();
+  $('infoSheet').classList.remove('open'); $('expSheet').classList.remove('open');
+  $('nb').classList.add('open'); document.body.style.overflow = 'hidden';
+  nbReset(); $('nbName').value = ''; nbDiagram(); $('nbBody').scrollTop = 0;
+}
+function nbClose(){ $('nb').classList.remove('open'); document.body.style.overflow = ''; nbReset(); }
+$('bNombre').onclick = nbOpen;
+$('nbClose').onclick = nbClose;
+$('nbRun').onclick = nbRun;
+document.querySelectorAll('#nb input, #nb select').forEach(el=>{
+  if (el.id==='nbName') return;
+  const ev = el.matches('select, [type=radio], [type=checkbox]') ? 'change' : 'input';
+  el.addEventListener(ev, ()=>{
+    if (el.name==='nbBind'){   // 綴じ方向に合わせて1ページ目の左右を初期化
+      const v = el.value==='right' ? 'left' : 'right';
+      document.querySelector(`#nb input[name="nbFirst"][value="${v}"]`).checked = true;
+    }
+    nbDiagram(); nbSaveSettings();
+    if (nbOut) nbReset('設定を変えました。もう一度「番号を付ける」を押してください。');
+  });
+});
+nbLoadSettings();
+
+// keep page list scrollable above an open sheet
+function fitPad(){
+  const open = document.querySelector('.sheet.open');
+  $('main').style.paddingBottom = (open ? open.offsetHeight + 24 : 220) + 'px';
+}
+new MutationObserver(fitPad).observe(document.body,{subtree:true,attributes:true,attributeFilter:['class','hidden']});
+if (window.ResizeObserver){ const ro=new ResizeObserver(fitPad); document.querySelectorAll('.sheet').forEach(x=>ro.observe(x)); }
+render();
 })();
 </script>
-
 </body>
 </html>

@@ -365,10 +365,15 @@ input[type=number],input[type=text]{font:inherit;font-size:16px;border:1px solid
         </div>
       </div>
       <div class="field grid2">
-        <div><label class="h" for="nbStart">開始ページ番号</label><input type="number" id="nbStart" min="1" step="1" value="1" inputmode="numeric"></div>
-        <div><label class="h" for="nbHide">番号を隠すページ</label><input type="text" id="nbHide" placeholder="例：1-2, 42" autocomplete="off"></div>
+        <div><label class="h" for="nbFrom">付け始めるページ</label><span class="unit"><input type="number" id="nbFrom" min="1" step="1" value="1" inputmode="numeric"><em>枚目</em></span></div>
+        <div><label class="h" for="nbStart">そのページの番号</label><input type="number" id="nbStart" min="1" step="1" value="1" inputmode="numeric"></div>
       </div>
-      <p class="hint">開始ページ番号は、今の並びの1ページ目に割り当てる番号です。表紙や扉など番号を出したくないページは番号で指定します（数えたまま非表示になり、タイトルも出ません）。</p>
+      <p class="hint">「付け始めるページ」は今の並びで何枚目から番号を付けるかです。それより前（表紙など）には番号もタイトルも入りません。<br>例：表紙2枚を除いて本文を1から → 3枚目から・番号1／表紙も数えて本文を3から → 3枚目から・番号3</p>
+      <div class="field">
+        <label class="h" for="nbHide">番号を隠すページ（任意）</label>
+        <input type="text" id="nbHide" placeholder="例：1-2, 42" autocomplete="off">
+        <p class="hint">付けたページ番号で指定します。扉や白ページなど、数えたまま番号だけ出したくないページに使います。</p>
+      </div>
       <div class="field grid3">
         <div><label class="h" for="nbSize">文字サイズ</label><span class="unit"><input type="number" id="nbSize" min="5" max="24" step="0.5" value="9" inputmode="decimal"><em>pt</em></span></div>
         <div><label class="h" for="nbVdist">上下から</label><span class="unit"><input type="number" id="nbVdist" min="0" max="60" step="0.5" value="10" inputmode="decimal"><em>mm</em></span></div>
@@ -437,8 +442,11 @@ input[type=number],input[type=text]{font:inherit;font-size:16px;border:1px solid
 <script>
 /* ===== ここを書き換えてください ===== */
 const X_ACCOUNT = "@H4ru_ycy";   // お問い合わせ用のXアカウント。空にすると「準備中」と表示されます。
-const APP_VERSION = "2.0.1";
+const APP_VERSION = "2.1.0";
 const HISTORY = [
+  { ver: "2.1.0", date: "2026-11-20", notes: [
+    "ページ番号を付け始めるページ（何枚目から）を指定できるように。表紙などを番号の対象から外せます"
+  ]},
   { ver: "2.0.1", date: "2026-11-20", notes: [
     "白ページ（中身のないページ）が含まれていると、ページ番号を付けられなかった不具合を修正"
   ]},
@@ -864,6 +872,7 @@ function nbOpts(){
     gutter: nbRadio('nbGut')==='on' ? Math.max(0, nbNum('nbGutter',0)) : 0,
     bind: nbRadio('nbBind'), first: nbRadio('nbFirst'),
     numPos: nbRadio('nbNumPos'),
+    from: Math.max(1, Math.round(nbNum('nbFrom',1))),
     start: Math.max(1, Math.round(nbNum('nbStart',1))),
     hide: parseHide($('nbHide').value),
     size: Math.min(24, Math.max(5, nbNum('nbSize',9))),
@@ -887,9 +896,12 @@ function parseHide(txt){
 }
 const sideOf = (i,o) => (i%2===0) ? o.first : (o.first==='left' ? 'right' : 'left');
 // 1ページ分の置き場所。h は left/center/right、items は左から順（n=番号, t=タイトル）
+// 並びの i 番目（0始まり）のページ番号。付け始める前のページは null
+const numOf = (i,o) => i < o.from-1 ? null : o.start + i - (o.from-1);
+const showNum = (i,o) => { const n = numOf(i,o); return n!=null && !o.hide.has(n); };
 function groupsFor(i, side, o){
-  const n = o.start + i;
-  if (o.hide.has(n)) return [];
+  const n = numOf(i,o);
+  if (n==null || o.hide.has(n)) return [];
   const map = {};
   const put = (pos, item)=>{
     const [v,h] = pos.split('-'); const hh = h==='outer' ? side : 'center';
@@ -918,7 +930,7 @@ function pageGeom(p){
 }
 
 /* settings */
-const NB_FIELDS = ['nbPaper','nbGutter','nbStart','nbHide','nbSize','nbVdist','nbOuter','nbTitle'];
+const NB_FIELDS = ['nbPaper','nbGutter','nbFrom','nbStart','nbHide','nbSize','nbVdist','nbOuter','nbTitle'];
 const NB_RADIOS = ['nbGut','nbBind','nbFirst','nbNumPos','nbFace','nbTitlePos'];
 const NB_CHECKS = ['nbTitleL','nbTitleR'];
 const NB_KEY = 'pdf-hensei-nombre-v1';
@@ -944,12 +956,13 @@ function nbDiagram(){
   $('nbGutter').disabled = nbRadio('nbGut')!=='on';
   const total = Math.max(pages.length, 4);
   const lead = o.bind==='right' ? 'right' : 'left';
-  let i0 = 2; while (sideOf(i0,o)!==lead) i0++;
+  $('nbFrom').max = Math.max(1, pages.length);
+  let i0 = Math.max(2, o.from-1); while (sideOf(i0,o)!==lead) i0++;
   const byPos = {}; [i0,i0+1].forEach(i=>byPos[sideOf(i,o)] = i);
   const geomAt = i => { const p = pages[Math.min(i, pages.length-1)]; return p ? pageGeom(p) : { w:148*MM, h:210*MM }; };
   const pct = (v,t)=>(v/t*100).toFixed(2)+'%';
   const html = side=>{
-    const i = byPos[side], n = o.start+i, g = geomAt(i);
+    const i = byPos[side], n = numOf(i,o), g = geomAt(i);
     const L = nbLayout(g.w, g.h, side, o); const {pw,ph,T} = L;
     let h = `<div class="mini ${o.bind==='right'?'v':'h'}" style="aspect-ratio:${pw.toFixed(1)}/${ph.toFixed(1)}">`;
     if (o.gutter>0){ const gw=o.gutter*MM; h += `<div class="gut" style="left:${pct(side==='left'?T.x+T.w-gw:T.x,pw)};width:${pct(gw,pw)}"></div>`; }
@@ -967,9 +980,10 @@ function nbDiagram(){
     return h+'</div>';
   };
   $('nbSpread').innerHTML = html('left') + html('right');
-  const nL = o.start+byPos.left, nR = o.start+byPos.right;
-  $('nbCap').textContent = `左ページ p.${nL}${o.hide.has(nL)?'（番号なし）':''} ／ 右ページ p.${nR}${o.hide.has(nR)?'（番号なし）':''}`;
+  const capOf = i => showNum(i,o) ? `p.${numOf(i,o)}` : '番号なし';
+  $('nbCap').textContent = `左ページ（${byPos.left+1}枚目）${capOf(byPos.left)} ／ 右ページ（${byPos.right+1}枚目）${capOf(byPos.right)}`;
   const lg = [];
+  if (pages.length && o.from > pages.length) lg.push(`<span style="color:#b3261e">付け始めるページが全体（${pages.length}枚）を超えています</span>`);
   if (o.gutter>0) lg.push(`<span><i style="background:var(--gut)"></i>とじしろ ${o.gutter}mm</span>`);
   if (o.bleed>0) lg.push(`<span><i style="border:1px dashed var(--accent)"></i>仕上がり線（外側3mmは塗り足し）</span>`);
   $('nbLegend').innerHTML = lg.join('');
@@ -1022,6 +1036,7 @@ function nbReset(msg){
 async function nbRun(){
   if (!pages.length) return;
   const o = nbOpts();
+  if (o.from > pages.length){ nbSetStatus(`付け始めるページ（${o.from}枚目）が全体の枚数（${pages.length}枚）を超えています。`, 'err'); return; }
   $('nbRun').disabled = true; $('nbSave').disabled = true;
   busy(true, '番号を付けています…');
   try{
@@ -1044,7 +1059,7 @@ async function nbRun(){
       else if (E.kind==='image'){ page.drawImage(E.obj, { x:org[0], y:org[1], width:W, height:H, rotate:degrees(-g.R) }); rastered++; }
       // E.kind==='blank'：中身のない白ページはそのまま（番号だけ入れる）
       if (L.s < 0.995) scaled++;
-      const T = L.T, n = o.start+i, groups = groupsFor(i, side, o);
+      const T = L.T, n = numOf(i,o), groups = groupsFor(i, side, o);
       if (groups.length) placed++;
       for (const gr of groups){
         const parts = gr.items.map(it=> it==='n'
@@ -1063,7 +1078,7 @@ async function nbRun(){
     }
     nbOut = await doc.save();
     busy(false);
-    nbSetStatus(`${placed}ページに番号を付けました（p.${o.start}〜${o.start+pages.length-1}）。見開きで確認して保存してください。`, 'ok');
+    nbSetStatus(`${placed}ページに番号を付けました（${o.from}枚目から p.${o.start}〜${numOf(pages.length-1,o)}）。見開きで確認して保存してください。`, 'ok');
     const w = [];
     if (scaled && o.paper!=='orig') w.push(`${scaled}ページは、選んだサイズやとじしろに合わせて縮小して配置しました。`);
     if (o.paper==='orig' && o.gutter>0) w.push('元のサイズのままとじしろを空けたため、本文を少し縮小しています。');
@@ -1101,7 +1116,7 @@ async function nbRenderSpreads(){
   $('nbRange').textContent = `見開き ${nbStartView}–${end} / ${nbSpreadList.length}`;
   $('nbPrev').disabled = nbStartView<=1; $('nbNext').disabled = end>=nbSpreadList.length;
   const dpr = Math.min(window.devicePixelRatio||1, 2);
-  const label = i => { const n=o.start+i; return o.hide.has(n) ? '番号なし' : 'p.'+n; };
+  const label = i => showNum(i,o) ? 'p.'+numOf(i,o) : '番号なし';
   for (let k=nbStartView;k<=end;k++){
     const sp = nbSpreadList[k-1];
     const fig = document.createElement('figure'); fig.className = 'sp';

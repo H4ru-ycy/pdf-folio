@@ -437,8 +437,11 @@ input[type=number],input[type=text]{font:inherit;font-size:16px;border:1px solid
 <script>
 /* ===== ここを書き換えてください ===== */
 const X_ACCOUNT = "@H4ru_ycy";   // お問い合わせ用のXアカウント。空にすると「準備中」と表示されます。
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.0.1";
 const HISTORY = [
+  { ver: "2.0.1", date: "2026-11-20", notes: [
+    "白ページ（中身のないページ）が含まれていると、ページ番号を付けられなかった不具合を修正"
+  ]},
   { ver: "2.0.0", date: "2026-11-04", notes: [
     "ページ番号追加ツールを統合。並べ替えたページにそのままページ番号（ノンブル）とタイトル（柱）を入れて保存できるように",
     "ページ番号の画面で、仕上がりを左右の見開きで確認できるように",
@@ -986,6 +989,29 @@ async function titleImage(text, sizePt, face){
   return { bytes:new Uint8Array(await blob.arrayBuffer()), w:w/scale, h:h/scale, below:(h-base)/scale, pad:2/scale };
 }
 
+/* ページを取り込む。白ページ（Contentsなし）は空のまま、取り込めないページは画像にして代用 */
+async function nbEmbed(doc, p, g){
+  if (!g.lp.node.Contents()) return { kind:'blank' };
+  try{
+    if (sources[p.src].lib.isEncrypted) throw new Error('encrypted');
+    const ep = await doc.embedPage(g.lp, { left:g.cb.x, bottom:g.cb.y, right:g.cb.x+g.cb.width, top:g.cb.y+g.cb.height });
+    await ep.embed();   // 保存時ではなく、ここで取り込みエラーを出させる
+    return { kind:'page', obj: ep };
+  }catch(e){
+    if (/missing contents/i.test(e && e.message || '')) return { kind:'blank' };
+    console.warn('embedPage failed, using image', e);
+    const pg = await sources[p.src].js.getPage(p.idx+1);
+    const v1 = pg.getViewport({ scale:1, rotation:0 });
+    const sc = Math.min(300/72, 4096/Math.max(v1.width, v1.height));
+    const vp = pg.getViewport({ scale:sc, rotation:0 });
+    const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height);
+    await pg.render({ canvasContext:ctx, viewport:vp }).promise;
+    const blob = await new Promise(r=>c.toBlob(r,'image/jpeg',0.92));
+    return { kind:'image', obj: await doc.embedJpg(new Uint8Array(await blob.arrayBuffer())) };
+  }
+}
+
 function nbSetStatus(t, cls){ $('nbStatus').className = 'nb-status' + (cls?' '+cls:''); $('nbStatus').textContent = t; }
 function nbReset(msg){
   nbOut = null; nbDoc = null; nbToken++;
@@ -1004,16 +1030,19 @@ async function nbRun(){
     let img = null, ii = null;
     if (o.title && !/^[\x20-\x7E]*$/.test(o.title)){ ii = await titleImage(o.title, o.size, o.face); img = await doc.embedPng(ii.bytes); }
     const gap = o.size*1.6, black = rgb(0,0,0), emb = {};
-    let placed = 0, scaled = 0;
+    let placed = 0, scaled = 0, rastered = 0;
     for (let i=0;i<pages.length;i++){
       const p = pages[i], g = pageGeom(p), side = sideOf(i,o);
       const L = nbLayout(g.w, g.h, side, o);
       const key = p.src+'_'+p.idx;
-      if (!emb[key]) emb[key] = await doc.embedPage(g.lp, { left:g.cb.x, bottom:g.cb.y, right:g.cb.x+g.cb.width, top:g.cb.y+g.cb.height });
+      if (!emb[key]) emb[key] = await nbEmbed(doc, p, g);
       const page = doc.addPage([L.pw, L.ph]);
       const W = g.cb.width*L.s, H = g.cb.height*L.s;
       const org = { 0:[L.x,L.y], 90:[L.x,L.y+W], 180:[L.x+W,L.y+H], 270:[L.x+H,L.y] }[g.R];
-      page.drawPage(emb[key], { x:org[0], y:org[1], xScale:L.s, yScale:L.s, rotate:degrees(-g.R) });
+      const E = emb[key];
+      if (E.kind==='page') page.drawPage(E.obj, { x:org[0], y:org[1], xScale:L.s, yScale:L.s, rotate:degrees(-g.R) });
+      else if (E.kind==='image'){ page.drawImage(E.obj, { x:org[0], y:org[1], width:W, height:H, rotate:degrees(-g.R) }); rastered++; }
+      // E.kind==='blank'：中身のない白ページはそのまま（番号だけ入れる）
       if (L.s < 0.995) scaled++;
       const T = L.T, n = o.start+i, groups = groupsFor(i, side, o);
       if (groups.length) placed++;
@@ -1038,6 +1067,7 @@ async function nbRun(){
     const w = [];
     if (scaled && o.paper!=='orig') w.push(`${scaled}ページは、選んだサイズやとじしろに合わせて縮小して配置しました。`);
     if (o.paper==='orig' && o.gutter>0) w.push('元のサイズのままとじしろを空けたため、本文を少し縮小しています。');
+    if (rastered) w.push(`${rastered}ページはそのまま取り込めなかったため、高解像度（300dpi）の画像として配置しました。`);
     $('nbWarn').innerHTML = w.map(t=>`<p class="nb-warn">${t}</p>`).join('');
     const first = sources[pages[0].src].name.replace(/\.pdf$/i,'');
     if (!$('nbName').value) $('nbName').value = first + '_ノンブル付き.pdf';
